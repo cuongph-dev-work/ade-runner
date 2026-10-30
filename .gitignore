@@ -1,0 +1,22 @@
+# Trí nhớ làm việc cục bộ của agent (AGENTS.md)
+.agent-kit/
+node_modules/
+
+# Data local của hub (ADE_DATA_DIR khi chạy pnpm dev)
+.data/
+
+# Build & báo cáo test
+dist/
+apps/web/dist/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Môi trường
+.env
+.env.*
+!.env.example
+
+# OS / Editor
+.DS_Store
+Thumbs.db
