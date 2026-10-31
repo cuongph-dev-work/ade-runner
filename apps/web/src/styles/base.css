@@ -879,3 +879,59 @@ body,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* P2 Runner Cards & Presence */
+.ade-presence-dot.ade-presence--running {
+  background-color: var(--color-brand);
+  box-shadow: 0 0 0 2px var(--color-paper-2), 0 0 8px var(--color-brand);
+  animation: ade-pulse 1.8s infinite;
+}
+
+@keyframes ade-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.15); }
+}
+
+.ade-panel {
+  background-color: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-md);
+}
+
+.ade-well {
+  background-color: var(--color-paper-3);
+  border: var(--rule-hair) solid var(--color-rule-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.ade-gate-card {
+  border-left: 3px solid var(--color-human);
+}
+
+.ade-gate-card[data-gate-status="approved"] {
+  border-left-color: var(--color-ok);
+}
+
+.ade-gate-card[data-gate-status="rejected"] {
+  border-left-color: var(--color-bad);
+}
+
+.ade-gate-card[data-gate-status="cancelled"] {
+  border-left-color: var(--color-rule);
+}
+
+.ade-gate-mark {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--color-human);
+}
+
+.ade-btn--danger {
+  color: var(--color-bad);
+  border-color: var(--color-bad);
+}
+.ade-btn--danger:hover {
+  background-color: var(--color-paper-3);
+}

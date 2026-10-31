@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
-import type { EventEnvelope } from "@ade/shared";
+import type { EventEnvelope, RunStatus, RunnerStatus } from "@ade/shared";
+import { assertRunTransition, assertRunnerTransition } from "../runner/state-machines.js";
 
 export const LOCAL_USER_ID = "usr_local";
 export const LOCAL_USER_HANDLE = "owner";
@@ -268,7 +269,212 @@ export function applyEventToProjection(
     }
 
     case "agent.mentioned":
+      break;
+
+    case "runner.connected":
+    case "runner.disconnected":
+    case "run.queued":
+    case "run.started":
+    case "run.permission_requested":
+    case "run.permission_resolved":
+    case "run.completed":
+    case "run.failed":
+    case "run.cancelled": {
+      projectRunnerEvent(sqlite, {
+        type: event.type,
+        projectId: event.project_id,
+        threadId: event.thread_id,
+        runId: event.run_id,
+        actorId: event.actor.id,
+        payload: event.payload,
+        ts: event.ts
+      });
+      break;
+    }
+
     default:
       break;
+  }
+}
+
+export function projectRunnerEvent(
+  sqlite: Database.Database,
+  evt: {
+    type: string;
+    projectId: string | null;
+    threadId: string | null;
+    runId: string | null;
+    actorId: string;
+    payload: Record<string, unknown>;
+    ts: string;
+  }
+): void {
+  if (evt.type === "runner.connected") {
+    const runnerId = String(evt.payload.runner_id);
+    const existing = sqlite
+      .prepare("SELECT status FROM runners WHERE id = ?")
+      .get(runnerId) as { status: RunnerStatus } | undefined;
+    assertRunnerTransition(existing?.status ?? null, "online");
+    if (!existing) {
+      sqlite
+        .prepare(
+          `INSERT INTO runners (id, owner_user_id, machine_name, harnesses_available_json, status, last_seen)
+           VALUES (?, ?, ?, ?, 'online', ?)`
+        )
+        .run(
+          runnerId,
+          evt.actorId,
+          String(evt.payload.machine_name),
+          JSON.stringify(evt.payload.harnesses_available ?? []),
+          evt.ts
+        );
+    } else {
+      sqlite
+        .prepare(
+          `UPDATE runners SET status = 'online', machine_name = ?, harnesses_available_json = ?, last_seen = ? WHERE id = ?`
+        )
+        .run(
+          String(evt.payload.machine_name),
+          JSON.stringify(evt.payload.harnesses_available ?? []),
+          evt.ts,
+          runnerId
+        );
+    }
+    return;
+  }
+
+  if (evt.type === "runner.disconnected") {
+    const runnerId = String(evt.payload.runner_id);
+    const existing = sqlite
+      .prepare("SELECT status FROM runners WHERE id = ?")
+      .get(runnerId) as { status: RunnerStatus } | undefined;
+    assertRunnerTransition(existing?.status ?? null, "offline");
+    sqlite
+      .prepare("UPDATE runners SET status = 'offline', last_seen = ? WHERE id = ?")
+      .run(evt.ts, runnerId);
+    return;
+  }
+
+  if (evt.type === "message.posted" && evt.payload.kind === "system" && evt.threadId) {
+    const msgId = String(evt.payload.message_id ?? `msg_${evt.ts}`);
+    const exists = sqlite.prepare("SELECT id FROM messages WHERE id = ?").get(msgId);
+    if (!exists) {
+      sqlite
+        .prepare(
+          `INSERT INTO messages (
+            id, thread_id, is_root, author_type, author_id, kind, body,
+            mentions_json, human_mentions_json, reactions_json, card_json, run_id, created_at, updated_at
+          ) VALUES (?, ?, 0, 'system', ?, 'system', ?, '[]', '[]', '[]', NULL, ?, ?, ?)`
+        )
+        .run(
+          msgId,
+          evt.threadId,
+          evt.actorId,
+          String(evt.payload.body ?? evt.payload.text ?? ""),
+          evt.runId,
+          evt.ts,
+          evt.ts
+        );
+    }
+    return;
+  }
+
+  if (evt.type === "run.queued") {
+    sqlite
+      .prepare(
+        `INSERT INTO runs (
+          id, project_id, thread_id, agent_id, invoked_by, credential_profile,
+          role, depth, timeout_s, status, skills_snapshot_json, cost_usd, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, 0, ?)`
+      )
+      .run(
+        String(evt.payload.run_id),
+        evt.projectId,
+        evt.threadId,
+        String(evt.payload.agent_id),
+        evt.actorId,
+        String(evt.payload.credential_profile),
+        String(evt.payload.role ?? "worker"),
+        Number(evt.payload.depth ?? 0),
+        Number(evt.payload.timeout_s ?? 600),
+        JSON.stringify(evt.payload.skills_snapshot ?? []),
+        evt.ts
+      );
+    return;
+  }
+
+  if (!evt.runId) return;
+  const currentRun = sqlite
+    .prepare("SELECT status, outcome, thread_id, cost_usd FROM runs WHERE id = ?")
+    .get(evt.runId) as
+    | { status: RunStatus; outcome: string | null; thread_id: string; cost_usd: number }
+    | undefined;
+  if (!currentRun) return;
+
+  if (evt.type === "run.started") {
+    assertRunTransition(currentRun.status, "running");
+    sqlite
+      .prepare(
+        `UPDATE runs SET status = 'running', runner_id = ?, acp_session_id = ?, started_at = ? WHERE id = ?`
+      )
+      .run(
+        evt.payload.runner_id ? String(evt.payload.runner_id) : null,
+        evt.payload.acp_session_id ? String(evt.payload.acp_session_id) : null,
+        evt.ts,
+        evt.runId
+      );
+  } else if (evt.type === "run.permission_requested") {
+    assertRunTransition(currentRun.status, "waiting_permission");
+    sqlite.prepare("UPDATE runs SET status = 'waiting_permission' WHERE id = ?").run(evt.runId);
+  } else if (evt.type === "run.permission_resolved") {
+    assertRunTransition(currentRun.status, "running");
+    sqlite.prepare("UPDATE runs SET status = 'running' WHERE id = ?").run(evt.runId);
+  } else if (evt.type === "run.completed") {
+    assertRunTransition(currentRun.status, "completed");
+    const finalOutcome = String(evt.payload.outcome ?? currentRun.outcome ?? "unknown");
+    const settledCost = Number(evt.payload.cost_usd ?? currentRun.cost_usd ?? 0);
+    sqlite
+      .prepare(
+        `UPDATE runs SET status = 'completed', stop_reason = ?, outcome = ?, summary = ?, decisions_json = ?, cost_usd = ?, ended_at = ? WHERE id = ?`
+      )
+      .run(
+        String(evt.payload.stop_reason ?? "end_turn"),
+        finalOutcome,
+        evt.payload.summary ? String(evt.payload.summary) : null,
+        JSON.stringify(evt.payload.decisions ?? []),
+        settledCost,
+        evt.ts,
+        evt.runId
+      );
+    sqlite
+      .prepare("UPDATE threads SET spent_usd = COALESCE(spent_usd, 0) + ?, updated_at = ? WHERE id = ?")
+      .run(settledCost, evt.ts, currentRun.thread_id);
+  } else if (evt.type === "run.failed") {
+    assertRunTransition(currentRun.status, "failed");
+    const settledCost = Number(evt.payload.cost_usd ?? currentRun.cost_usd ?? 0);
+    sqlite
+      .prepare(
+        `UPDATE runs SET status = 'failed', stop_reason = ?, cost_usd = ?, ended_at = ? WHERE id = ?`
+      )
+      .run(
+        String(evt.payload.stop_reason ?? "error"),
+        settledCost,
+        evt.ts,
+        evt.runId
+      );
+    sqlite
+      .prepare("UPDATE threads SET spent_usd = COALESCE(spent_usd, 0) + ?, updated_at = ? WHERE id = ?")
+      .run(settledCost, evt.ts, currentRun.thread_id);
+  } else if (evt.type === "run.cancelled") {
+    assertRunTransition(currentRun.status, "cancelled");
+    const accruedCost = Number(currentRun.cost_usd ?? 0);
+    sqlite
+      .prepare("UPDATE runs SET status = 'cancelled', stop_reason = 'cancelled', ended_at = ? WHERE id = ?")
+      .run(evt.ts, evt.runId);
+    if (accruedCost > 0) {
+      sqlite
+        .prepare("UPDATE threads SET spent_usd = COALESCE(spent_usd, 0) + ?, updated_at = ? WHERE id = ?")
+        .run(accruedCost, evt.ts, currentRun.thread_id);
+    }
   }
 }

@@ -127,3 +127,48 @@ export const eventsTable = sqliteTable("events", {
   correlationId: text("correlation_id"),
   ts: text("ts").notNull()
 });
+
+export const runnersTable = sqliteTable("runners", {
+  id: text("id").primaryKey(),
+  ownerUserId: text("owner_user_id").notNull(),
+  machineName: text("machine_name").notNull(),
+  harnessesAvailableJson: text("harnesses_available_json").notNull(),
+  status: text("status").notNull(),
+  lastSeen: text("last_seen").notNull()
+});
+
+export const runsTable = sqliteTable("runs", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull(),
+  threadId: text("thread_id").notNull(),
+  agentId: text("agent_id").notNull(),
+  invokedBy: text("invoked_by").notNull(),
+  runnerId: text("runner_id"),
+  credentialProfile: text("credential_profile").notNull(),
+  acpSessionId: text("acp_session_id"),
+  role: text("role").notNull(),
+  task: text("task"),
+  delegationId: text("delegation_id"),
+  parentRunId: text("parent_run_id"),
+  depth: integer("depth").notNull().default(0),
+  timeoutS: integer("timeout_s").notNull().default(600),
+  status: text("status").notNull(),
+  outcome: text("outcome"),
+  stopReason: text("stop_reason"),
+  summary: text("summary"),
+  decisionsJson: text("decisions_json"),
+  skillsSnapshotJson: text("skills_snapshot_json").notNull().default("[]"),
+  costUsd: real("cost_usd").notNull().default(0),
+  startedAt: text("started_at"),
+  endedAt: text("ended_at"),
+  createdAt: text("created_at").notNull()
+});
+
+export const runLogsTable = sqliteTable("run_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  runId: text("run_id").notNull(),
+  seq: integer("seq").notNull(),
+  kind: text("kind").notNull(),
+  dataJson: text("data_json").notNull(),
+  ts: text("ts").notNull()
+});

@@ -6,6 +6,7 @@ import {
   type Channel,
   type Message,
   type ProjectSummary,
+  type RunSummary,
   type Thread
 } from "@ade/shared";
 
@@ -235,6 +236,74 @@ export function useChatRealtime(enabled: boolean): RealtimeState {
                       : p
                   )
                 : prev
+            );
+            break;
+          }
+
+          case "message.created": {
+            const newMsg: Message = {
+              id: frame.data.messageId,
+              threadId: frame.data.threadId,
+              isRoot: false,
+              authorType: frame.data.kind === "system" ? "system" : "agent",
+              authorId: frame.data.kind === "system" ? "system" : "agent",
+              kind: frame.data.kind,
+              body: frame.data.body,
+              mentions: [],
+              humanMentions: [],
+              reactions: [],
+              card: frame.data.card ?? null,
+              runId: frame.data.runId ?? null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            upsertThreadMessageCache(queryClient, {
+              channelId: frame.data.channelId,
+              threadId: frame.data.threadId,
+              message: newMsg
+            });
+            break;
+          }
+
+          case "message.updated": {
+            queryClient.setQueryData<Message[]>(
+              ["messages", frame.data.threadId],
+              (prev) =>
+                prev
+                  ? prev.map((m) =>
+                      m.id === frame.data.messageId
+                        ? {
+                            ...m,
+                            card: frame.data.card,
+                            updatedAt: new Date().toISOString()
+                          }
+                        : m
+                    )
+                  : prev
+            );
+            break;
+          }
+
+          case "run.updated": {
+            queryClient.setQueryData<RunSummary[]>(
+              ["runs", "thread", frame.data.threadId],
+              (prev) => {
+                if (!prev) return [frame.data.run];
+                const exists = prev.some((r) => r.id === frame.data.run.id);
+                return exists
+                  ? prev.map((r) => (r.id === frame.data.run.id ? frame.data.run : r))
+                  : [...prev, frame.data.run];
+              }
+            );
+            queryClient.setQueryData<RunSummary[]>(
+              ["runs", "project", frame.data.projectId],
+              (prev) => {
+                if (!prev) return [frame.data.run];
+                const exists = prev.some((r) => r.id === frame.data.run.id);
+                return exists
+                  ? prev.map((r) => (r.id === frame.data.run.id ? frame.data.run : r))
+                  : [...prev, frame.data.run];
+              }
             );
             break;
           }

@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AcpStdioClient, FakeClaudeDriver } from "../src/index.js";
+import { AcpStdioClient, LegacyFakeClaudeDriver } from "../src/index.js";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 const fakeAgentEntry = resolve(repoRoot, "packages/runner/src/fake/ade-fake-agent.ts");
@@ -98,7 +98,7 @@ describe("ade-fake-agent over ACP stdio & FakeClaudeDriver", () => {
 
   it("runs FakeClaudeDriver in identical event order for planner-done.yaml", async () => {
     const scenarioPath = resolve(repoRoot, "tests/scenarios/planner-done.yaml");
-    const driver = new FakeClaudeDriver(scenarioPath);
+    const driver = new LegacyFakeClaudeDriver(scenarioPath);
     const trace: string[] = [];
 
     const result = await driver.run(

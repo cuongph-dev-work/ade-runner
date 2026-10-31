@@ -56,7 +56,12 @@ export const FIELD_LABELS: Record<string, string> = {
   citations: "Danh sách trích dẫn mã nguồn",
   questions: "Danh sách câu hỏi làm rõ",
   answers: "Danh sách câu trả lời",
-  otherText: "Câu trả lời khác"
+  otherText: "Câu trả lời khác",
+  decision: "Quyết định",
+  threadId: "Mã thread",
+  runId: "Mã phiên chạy",
+  requestId: "Mã yêu cầu quyền",
+  projectId: "Mã dự án"
 };
 
 export interface ValidationRuleItem {
@@ -120,8 +125,32 @@ export const VALIDATION_CATALOG = {
   "chat.message.react": [
     { id: "V-28", field: "emoji", jsonField: "emoji", rule: "required", msg: "MSG01" },
     { id: "V-29", field: "emoji", jsonField: "emoji", rule: "in:👍,❤️,🔥,🚀,🎉,👀,✅,🙌", msg: "MSG04" }
+  ],
+  "runner.permission.reply": [
+    { id: "V-01", field: "optionId", jsonField: "optionId", rule: "trim" },
+    { id: "V-02", field: "optionId", jsonField: "optionId", rule: "required", msg: "MSG01" },
+    { id: "V-03", field: "optionId", jsonField: "optionId", rule: "min:1", msg: "MSG01" },
+    { id: "V-04", field: "optionId", jsonField: "optionId", rule: "max:64", msg: "MSG02", params: { max: 64 } },
+    { id: "V-05", field: "decision", jsonField: "decision", rule: "required", msg: "MSG01" },
+    { id: "V-06", field: "decision", jsonField: "decision", rule: "in:allow,deny", msg: "MSG04" }
   ]
 } as const satisfies Record<string, readonly ValidationRuleItem[]>;
+
+export const RUNNER_PERMISSION_REPLY_RULES = [
+  { id: "V-01", field: "optionId", label: "Lựa chọn", rule: "trim", msgCode: null },
+  { id: "V-02", field: "optionId", label: "Lựa chọn", rule: "required", msgCode: "MSG01" },
+  { id: "V-03", field: "optionId", label: "Lựa chọn", rule: "min:1", msgCode: "MSG01" },
+  { id: "V-04", field: "optionId", label: "Lựa chọn", rule: "max:64", msgCode: "MSG02" },
+  { id: "V-05", field: "decision", label: "Quyết định", rule: "required", msgCode: "MSG01" },
+  { id: "V-06", field: "decision", label: "Quyết định", rule: "in:allow,deny", msgCode: "MSG04" }
+] as const;
+
+export const RUNNER_PATH_PARAM_RULES = [
+  { id: "V-07", field: "threadId", label: "Mã thread", rule: "regex:^thr_[a-zA-Z0-9_-]{2,32}$", msgCode: "MSG04" },
+  { id: "V-08", field: "runId", label: "Mã phiên chạy", rule: "regex:^run_[a-zA-Z0-9_-]{2,32}$", msgCode: "MSG04" },
+  { id: "V-09", field: "requestId", label: "Mã yêu cầu quyền", rule: "regex:^req_[a-zA-Z0-9_-]{2,32}$", msgCode: "MSG04" },
+  { id: "V-10", field: "projectId", label: "Mã dự án", rule: "regex:^prj_[a-zA-Z0-9_-]{2,32}$", msgCode: "MSG04" }
+] as const;
 
 export type ValidationCatalogKey = keyof typeof VALIDATION_CATALOG;
 

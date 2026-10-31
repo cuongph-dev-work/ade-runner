@@ -4,14 +4,27 @@ import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
 import type { FSWatcher } from "chokidar";
-import { AdeModeSchema, ERROR_CODES, type AdeMode } from "@ade/shared";
+import { ulid } from "ulid";
+import {
+  AdeModeSchema,
+  ERROR_CODES,
+  type ActorType,
+  type AdeMode,
+  type EventType,
+  type WsServerEvent,
+} from "@ade/shared";
+import { InProcessRunnerTransport, type RunnerTransport } from "@ade/runner";
 import { openHubDatabase, type HubDatabase } from "./db/client.js";
+import { LOCAL_USER_ID } from "./db/projector.js";
 import { createLocalOriginPreHandler } from "./plugins/local-origin-guard.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerWsRoutes } from "./routes/ws.js";
+import { registerRunRoutes } from "./routes/runs.js";
 import { InMemoryEventBus } from "./events/event-bus.js";
 import { ChatService, HubDomainError } from "./chat/chat-service.js";
+import { HubDomainError as RunnerDomainError } from "./runner/state-machines.js";
+import { RunDispatcher } from "./runner/run-dispatcher.js";
 import { syncProjectAdeConfig, watchProjectAdeDirectory } from "./config/ade-loader.js";
 
 export interface BuildHubAppOptions {
@@ -21,6 +34,7 @@ export interface BuildHubAppOptions {
   webDistDir?: string;
   defaultRepoPath?: string;
   watchAdeFiles?: boolean;
+  runnerTransport?: RunnerTransport;
 }
 
 export interface HubServerBundle {
@@ -28,6 +42,8 @@ export interface HubServerBundle {
   hubDb: HubDatabase;
   chatService: ChatService;
   eventBus: InMemoryEventBus;
+  runDispatcher: RunDispatcher;
+  runnerTransport: RunnerTransport;
 }
 
 export async function buildHubApp(
@@ -66,6 +82,51 @@ export async function buildHubApp(
     }
   }
 
+  const runnerTransport = options.runnerTransport ?? new InProcessRunnerTransport();
+
+  const runDispatcher = new RunDispatcher({
+    sqlite: hubDb.sqlite,
+    mode,
+    mcpUrl: null,
+    transport: runnerTransport,
+    appendEvent: (evt) => {
+      hubDb.appendAndProject([
+        {
+          id: `evt_${ulid()}`,
+          type: evt.type as EventType,
+          ts: new Date().toISOString(),
+          project_id: evt.projectId,
+          thread_id: evt.threadId,
+          run_id: evt.runId,
+          actor: { type: evt.actorType as ActorType, id: evt.actorId },
+          causation_id: null,
+          correlation_id: evt.threadId,
+          payload: evt.payload,
+        },
+      ]);
+    },
+    broadcastWs: (_threadId, event) => {
+      eventBus.publish(event as unknown as WsServerEvent);
+    },
+    resolveAgentSkills: () => [],
+  });
+
+  eventBus.subscribe((frame) => {
+    if (frame.type === "agent.mentioned") {
+      try {
+        runDispatcher.onAgentMentioned({
+          projectId: frame.data.projectId,
+          threadId: frame.data.threadId,
+          agentId: frame.data.agentId,
+          invokedBy: LOCAL_USER_ID,
+          promptText: frame.data.text,
+        });
+      } catch (err) {
+        console.error("Failed to dispatch agent run:", err);
+      }
+    }
+  });
+
   const app = Fastify({ logger: false });
   await app.register(fastifyWebsocket);
 
@@ -75,6 +136,15 @@ export async function buildHubApp(
         code: error.code,
         message: error.message,
         details: error.details
+      });
+      return;
+    }
+
+    if (error instanceof RunnerDomainError) {
+      void reply.status(error.httpStatus).send({
+        code: error.code,
+        message: error.message,
+        details: error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}
       });
       return;
     }
@@ -100,6 +170,7 @@ export async function buildHubApp(
   await registerHealthRoutes(app, { hubDb, version });
   await registerChatRoutes(app, chatService);
   await registerWsRoutes(app, eventBus);
+  await registerRunRoutes(app, { dispatcher: runDispatcher, mode });
 
   const distDir =
     options.webDistDir ?? resolve(import.meta.dirname, "../../web/dist");
@@ -129,5 +200,5 @@ export async function buildHubApp(
     }
   });
 
-  return { app, hubDb, chatService, eventBus };
+  return { app, hubDb, chatService, eventBus, runDispatcher, runnerTransport };
 }

@@ -1,0 +1,5 @@
+agent: "@fake_parity"
+steps:
+  - plan: ["Đọc cấu trúc module hiện tại"]
+  - tool_call: { name: Write, command: "src/hello.ts" }
+  - message: "Đã hoàn thành kịch bản 3 bước đồng nhất giữa hai họ driver."

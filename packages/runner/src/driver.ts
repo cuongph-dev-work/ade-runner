@@ -1,4 +1,8 @@
-import type { NormalizedRunEvent } from "@ade/shared";
+export type LegacyRunEvent =
+  | { kind: "plan"; entries: string[] }
+  | { kind: "tool_call"; name: string; path?: string; args?: Record<string, unknown> }
+  | { kind: "message_chunk"; text: string }
+  | { kind: "mcp_call"; tool: string; args: Record<string, unknown> };
 
 export interface PermissionOption {
   optionId: "allow" | "deny";
@@ -14,7 +18,7 @@ export interface PermissionRequestPayload {
 }
 
 export interface DriverRunCallbacks {
-  onEvent: (event: NormalizedRunEvent) => void | Promise<void>;
+  onEvent: (event: LegacyRunEvent) => void | Promise<void>;
   onPermissionRequest: (req: PermissionRequestPayload) => Promise<"allow" | "deny">;
   onMcpCall?: (tool: string, args: Record<string, unknown>) => Promise<unknown>;
 }
@@ -35,7 +39,7 @@ export interface DriverRunResult {
   costUsd: number;
 }
 
-export interface HarnessDriver {
+export interface LegacyHarnessDriver {
   readonly name: "claude" | "acp";
   run(input: DriverRunInput, callbacks: DriverRunCallbacks): Promise<DriverRunResult>;
 }

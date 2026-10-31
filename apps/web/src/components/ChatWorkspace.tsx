@@ -3,20 +3,26 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ALLOWED_REACTION_EMOJIS,
   resolveMsg,
+  type LiveCardPayload,
   type Message,
+  type PermissionCardPayload,
   type ProjectSummary,
   type ReactionEmoji
 } from "@ade/shared";
 import {
   ChatApiError,
+  cancelRunApi,
   createChannelThread,
   createProjectChannel,
   deleteChannelApi,
   fetchChannelThreads,
   fetchProjectAgents,
   fetchProjectChannels,
+  fetchProjectRuns,
   fetchThreadMessages,
+  fetchThreadRuns,
   postThreadReply,
+  replyPermissionApi,
   toggleMessageReaction,
   updateChannelApi
 } from "../api/chat.js";
@@ -29,6 +35,13 @@ import {
 import { ChannelSettingsModal, CreateChannelModal } from "./ChannelModals.js";
 import { MentionComposer } from "./MentionComposer.js";
 import { MessageBody } from "./MessageBody.js";
+import { LiveCard } from "./cards/LiveCard.js";
+import { PermissionCard } from "./cards/PermissionCard.js";
+import {
+  computeThreadRunSummary,
+  isAgentRunning,
+  shouldShowThreadReplyBar
+} from "./cards/run-presence.js";
 import type { ThemeMode } from "./SmokeShell.js";
 
 const QUICK_EMOJIS: ReactionEmoji[] = ["👍", "❤️", "🔥", "🚀"];
@@ -165,6 +178,20 @@ export function ChatWorkspace({
     enabled: Boolean(activeThreadId)
   });
 
+  const projectRunsQuery = useQuery({
+    queryKey: ["runs", "project", activeProject.id],
+    queryFn: () => fetchProjectRuns(activeProject.id),
+    refetchInterval: 3000
+  });
+  const projectRuns = projectRunsQuery.data ?? [];
+
+  useQuery({
+    queryKey: ["runs", "thread", activeThreadId ?? ""],
+    queryFn: () => fetchThreadRuns(activeThreadId!),
+    enabled: Boolean(activeThreadId),
+    refetchInterval: 2000
+  });
+
   const persistThreadWidth = (w: number): void => {
     const clamped = Math.max(340, Math.min(780, w));
     setThreadWidth(clamped);
@@ -280,6 +307,42 @@ export function ChatWorkspace({
     msg: Message,
     options: { threadId: string; inThreadPanel: boolean; replyCount?: number }
   ): JSX.Element => {
+    if (msg.kind === "live_card" && msg.card) {
+      const cardPayload = typeof msg.card === "string" ? JSON.parse(msg.card) : msg.card;
+      return (
+        <div key={msg.id} className="my-2">
+          <LiveCard
+            card={cardPayload as LiveCardPayload}
+            currentUserId="usr_local"
+            currentUserRole="owner"
+            onCancelRun={async (rId) => {
+              await cancelRunApi(rId);
+              void queryClient.invalidateQueries({ queryKey: ["runs"] });
+              void queryClient.invalidateQueries({ queryKey: ["messages", options.threadId] });
+            }}
+          />
+        </div>
+      );
+    }
+
+    if (msg.kind === "approval_card" && msg.card) {
+      const cardPayload = typeof msg.card === "string" ? JSON.parse(msg.card) : msg.card;
+      return (
+        <div key={msg.id} className="my-2">
+          <PermissionCard
+            card={cardPayload as PermissionCardPayload}
+            currentUserId="usr_local"
+            currentUserRole="owner"
+            onReplyPermission={async (p) => {
+              await replyPermissionApi(p);
+              void queryClient.invalidateQueries({ queryKey: ["runs"] });
+              void queryClient.invalidateQueries({ queryKey: ["messages", options.threadId] });
+            }}
+          />
+        </div>
+      );
+    }
+
     if (msg.kind === "system") {
       return (
         <div
@@ -344,20 +407,31 @@ export function ChatWorkspace({
             </div>
           )}
 
-          {!options.inThreadPanel && (options.replyCount ?? 0) > 0 && (
-            <button
-              type="button"
-              data-testid={`thread-reply-bar-${options.threadId}`}
-              className="ade-thread-bar"
-              onClick={() =>
-                navigate(
-                  `/projects/${activeProject.id}/channels/${activeChannel!.id}/threads/${options.threadId}`
-                )
-              }
-            >
-              <span>{options.replyCount} phản hồi</span>
-            </button>
-          )}
+          {!options.inThreadPanel && (() => {
+            const threadRunsForThis = projectRuns.filter((r) => r.threadId === options.threadId);
+            const showReplyBar = shouldShowThreadReplyBar(options.replyCount ?? 0, threadRunsForThis);
+            if (!showReplyBar) return null;
+            const runSummaryText = computeThreadRunSummary(threadRunsForThis);
+            return (
+              <button
+                type="button"
+                data-testid={`thread-reply-bar-${options.threadId}`}
+                className="ade-thread-bar"
+                onClick={() =>
+                  navigate(
+                    `/projects/${activeProject.id}/channels/${activeChannel!.id}/threads/${options.threadId}`
+                  )
+                }
+              >
+                <span>{options.replyCount ?? 0} phản hồi</span>
+                {runSummaryText && (
+                  <span data-testid="thread-run-summary" className="ml-2 font-medium">
+                    {runSummaryText}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
         </div>
 
         <div className="ade-msg-toolbar">
@@ -586,20 +660,32 @@ export function ChatWorkspace({
             <div className="ade-sidebar-section-head">
               <span>Bot / Agent</span>
             </div>
-            {agents.map((ag) => (
-              <div
-                key={ag.id}
-                data-testid={`agent-sidebar-item-${ag.handle.slice(1)}`}
-                className={
-                  ag.enabled
-                    ? "ade-nav-row"
-                    : "ade-nav-row ade-agent-row--disabled"
-                }
-              >
-                <span>{ag.handle}</span>
-                {!ag.enabled && <span className="ade-chip">Tắt</span>}
-              </div>
-            ))}
+            {agents.map((ag) => {
+              const handleClean = ag.handle.startsWith("@") ? ag.handle.slice(1) : ag.handle;
+              const running = isAgentRunning(projectRuns, ag.handle);
+              return (
+                <div
+                  key={ag.id}
+                  data-testid={`agent-sidebar-item-${handleClean}`}
+                  className={
+                    ag.enabled
+                      ? "ade-nav-row"
+                      : "ade-nav-row ade-agent-row--disabled"
+                  }
+                >
+                  <span
+                    data-testid={`sidebar-agent-dot-${handleClean}`}
+                    className={
+                      running
+                        ? "ade-presence-dot ade-presence--running"
+                        : "ade-presence-dot"
+                    }
+                  />
+                  <span>{ag.handle}</span>
+                  {!ag.enabled && <span className="ade-chip">Tắt</span>}
+                </div>
+              );
+            })}
           </div>
         </nav>
       </div>

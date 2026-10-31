@@ -102,7 +102,12 @@ test.describe("P1 @mention Autocomplete (2 Groups) & Semantic Highlight", () => 
       await page.getByTestId("composer-input").fill("Nhờ @ghost kiểm tra");
       await page.getByTestId("send-message-btn").click();
 
-      await expect(page.getByTestId("message-system-warning")).toContainText("@ghost");
+      await expect(
+        page
+          .getByTestId("thread-panel")
+          .getByTestId("message-system-warning")
+          .filter({ hasText: "@ghost" })
+      ).toBeVisible();
     } finally {
       await hub.cleanup();
     }

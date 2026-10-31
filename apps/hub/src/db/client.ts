@@ -159,6 +159,56 @@ BEFORE DELETE ON events
 BEGIN
   SELECT RAISE(ABORT, 'events table is append-only: DELETE is forbidden');
 END;
+
+CREATE TABLE IF NOT EXISTS runners (
+  id TEXT PRIMARY KEY NOT NULL,
+  owner_user_id TEXT NOT NULL,
+  machine_name TEXT NOT NULL,
+  harnesses_available_json TEXT NOT NULL,
+  status TEXT NOT NULL,
+  last_seen TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS runs (
+  id TEXT PRIMARY KEY NOT NULL,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  thread_id TEXT NOT NULL REFERENCES threads(id),
+  agent_id TEXT NOT NULL REFERENCES agents(id),
+  invoked_by TEXT NOT NULL,
+  runner_id TEXT REFERENCES runners(id),
+  credential_profile TEXT NOT NULL,
+  acp_session_id TEXT,
+  role TEXT NOT NULL,
+  task TEXT,
+  delegation_id TEXT,
+  parent_run_id TEXT,
+  depth INTEGER NOT NULL DEFAULT 0,
+  timeout_s INTEGER NOT NULL DEFAULT 600,
+  status TEXT NOT NULL,
+  outcome TEXT,
+  stop_reason TEXT,
+  summary TEXT,
+  decisions_json TEXT,
+  skills_snapshot_json TEXT NOT NULL DEFAULT '[]',
+  cost_usd REAL NOT NULL DEFAULT 0,
+  started_at TEXT,
+  ended_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_runs_thread_created ON runs(thread_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_runs_project_created ON runs(project_id, created_at);
+
+CREATE TABLE IF NOT EXISTS run_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id TEXT NOT NULL REFERENCES runs(id),
+  seq INTEGER NOT NULL,
+  kind TEXT NOT NULL,
+  data_json TEXT NOT NULL,
+  ts TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_run_logs_run_seq ON run_logs(run_id, seq);
 `;
 
 export function openHubDatabase(dbPath: string): HubDatabase {
@@ -219,6 +269,9 @@ export function openHubDatabase(dbPath: string): HubDatabase {
   const rebuildTx = sqlite.transaction(
     (afterReplay?: (sqliteConn: Database.Database) => void): void => {
       sqlite.exec(`
+        DELETE FROM run_logs;
+        DELETE FROM runs;
+        DELETE FROM runners;
         DELETE FROM messages;
         DELETE FROM threads;
         DELETE FROM channel_members;

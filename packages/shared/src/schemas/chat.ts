@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { WsRunnerServerEventSchema } from "./runner.js";
 import { ALLOWED_REACTION_EMOJIS } from "../validation-catalog.js";
 
 export const ProjectIdParamSchema = z.object({
@@ -366,6 +367,7 @@ export const WsServerEventSchema = z.discriminatedUnion("type", [
       agents: z.array(AgentSummarySchema),
       configErrors: z.array(ConfigErrorItemSchema)
     })
-  })
+  }),
+  ...WsRunnerServerEventSchema.options
 ]);
 export type WsServerEvent = z.infer<typeof WsServerEventSchema>;

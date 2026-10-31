@@ -1,24 +1,30 @@
 import {
   AgentListResponseSchema,
   ApiErrorResponseSchema,
+  CancelRunResponseSchema,
   ChannelListResponseSchema,
   ChannelResponseSchema,
   CreateThreadResponseSchema,
   DeleteChannelResponseSchema,
   MessageListResponseSchema,
+  PermissionReplyResponseSchema,
   PostMessageResponseSchema,
   ProjectListResponseSchema,
   ThreadListResponseSchema,
+  ThreadRunsResponseSchema,
   ToggleReactionResponseSchema,
   type AgentListResponse,
+  type CancelRunResponse,
   type Channel,
   type CreateThreadResponse,
   type DeleteChannelResponse,
   type FieldErrorMap,
   type Message,
+  type PermissionReplyResponse,
   type PostMessageResponse,
   type ProjectSummary,
   type ReactionEmoji,
+  type RunSummary,
   type Thread,
   type ToggleReactionResponse
 } from "@ade/shared";
@@ -180,5 +186,50 @@ export async function toggleMessageReaction(
     `/api/messages/${messageId}/reactions`,
     { method: "POST", body: JSON.stringify({ emoji }) },
     (d) => ToggleReactionResponseSchema.parse(d)
+  );
+}
+
+export async function fetchThreadRuns(threadId: string): Promise<RunSummary[]> {
+  const res = await requestJson(
+    `/api/threads/${threadId}/runs`,
+    { method: "GET" },
+    (d) => ThreadRunsResponseSchema.parse(d)
+  );
+  return res.runs;
+}
+
+export async function fetchProjectRuns(projectId: string): Promise<RunSummary[]> {
+  const res = await requestJson(
+    `/api/projects/${projectId}/runs`,
+    { method: "GET" },
+    (d) => ThreadRunsResponseSchema.parse(d)
+  );
+  return res.runs;
+}
+
+export async function replyPermissionApi(params: {
+  runId: string;
+  requestId: string;
+  optionId: string;
+  decision: "allow" | "deny";
+}): Promise<PermissionReplyResponse> {
+  return requestJson(
+    `/api/runs/${params.runId}/permissions/${params.requestId}/reply`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        optionId: params.optionId,
+        decision: params.decision
+      })
+    },
+    (d) => PermissionReplyResponseSchema.parse(d)
+  );
+}
+
+export async function cancelRunApi(runId: string): Promise<CancelRunResponse> {
+  return requestJson(
+    `/api/runs/${runId}/cancel`,
+    { method: "POST" },
+    (d) => CancelRunResponseSchema.parse(d)
   );
 }

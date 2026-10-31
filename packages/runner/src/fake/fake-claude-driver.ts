@@ -2,11 +2,11 @@ import type {
   DriverRunCallbacks,
   DriverRunInput,
   DriverRunResult,
-  HarnessDriver
+  LegacyHarnessDriver
 } from "../driver.js";
 import { loadScenarioFromFile } from "./scenario-loader.js";
 
-export class FakeClaudeDriver implements HarnessDriver {
+export class LegacyFakeClaudeDriver implements LegacyHarnessDriver {
   public readonly name = "claude" as const;
 
   constructor(private readonly scenarioPath: string) {}
