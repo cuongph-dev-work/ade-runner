@@ -36,6 +36,8 @@ import { GateService } from "./orchestration/gate-service.js";
 import { ThreadScheduler } from "./orchestration/thread-scheduler.js";
 import { registerOrchestrationRoutes } from "./routes/orchestration.js";
 import { syncProjectAdeConfig, watchProjectAdeDirectory } from "./config/ade-loader.js";
+import { SettingsService } from "./config/settings-service.js";
+import { registerSettingsRoutes } from "./routes/settings.js";
 
 export interface BuildHubAppOptions {
   dbPath: string;
@@ -59,6 +61,7 @@ export interface HubServerBundle {
   mcpServer: McpServer;
   ruleEngine: RuleEngine;
   mcpTokenService: McpTokenService;
+  settingsService: SettingsService;
 }
 
 export async function buildHubApp(
@@ -233,6 +236,29 @@ export async function buildHubApp(
     },
   });
 
+  const settingsService = new SettingsService({
+    sqlite: hubDb.sqlite,
+    publishEvent: (type, payload, opts) => {
+      hubDb.appendAndProject([
+        {
+          id: `evt_${ulid()}`,
+          type: type as EventType,
+          ts: new Date().toISOString(),
+          project_id: opts?.projectId ?? null,
+          thread_id: null,
+          run_id: null,
+          actor: { type: (opts?.actorType as ActorType) ?? "human", id: opts?.actorId ?? LOCAL_USER_ID },
+          causation_id: null,
+          correlation_id: null,
+          payload,
+        },
+      ]);
+    },
+    broadcastWs: (frame) => {
+      eventBus.publish(frame as unknown as WsServerEvent);
+    },
+  });
+
   runDispatcher = new RunDispatcher({
     sqlite: hubDb.sqlite,
     mode,
@@ -257,7 +283,26 @@ export async function buildHubApp(
     broadcastWs: (_threadId, event) => {
       eventBus.publish(event as unknown as WsServerEvent);
     },
-    resolveAgentSkills: () => [],
+    resolveAgentSkills: (agentId) => {
+      const skills = hubDb.sqlite
+        .prepare(
+          `SELECT s.name, s.scope, s.path, s.content_hash
+           FROM skills s
+           INNER JOIN agent_skills ask ON ask.skill_id = s.id
+           WHERE ask.agent_id = ?`
+        )
+        .all(agentId) as Array<{
+        name: string;
+        scope: "project" | "global";
+        path: string;
+        content_hash: string;
+      }>;
+      return skills.map((s) => ({
+        name: s.name,
+        sourceDir: s.path,
+        contentHash: s.content_hash,
+      }));
+    },
   });
 
   runDispatcher.onDelegationCheck = (delegationId) => {
@@ -473,6 +518,10 @@ export async function buildHubApp(
     sqlite: hubDb.sqlite,
     gateService,
   });
+  await registerSettingsRoutes(app, {
+    sqlite: hubDb.sqlite,
+    settingsService,
+  });
 
   const distDir =
     options.webDistDir ?? resolve(import.meta.dirname, "../../web/dist");
@@ -513,5 +562,6 @@ export async function buildHubApp(
     mcpServer,
     ruleEngine,
     mcpTokenService,
+    settingsService,
   };
 }

@@ -113,6 +113,29 @@ export const agentsTable = sqliteTable("agents", {
   updatedAt: text("updated_at").notNull()
 });
 
+export const skillsTable = sqliteTable("skills", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id"),
+  name: text("name").notNull(),
+  scope: text("scope").notNull(),
+  path: text("path").notNull(),
+  description: text("description").notNull(),
+  hasShellScript: integer("has_shell_script").notNull().default(0),
+  contentHash: text("content_hash").notNull(),
+  updatedAt: text("updated_at").notNull()
+});
+
+export const agentSkillsTable = sqliteTable(
+  "agent_skills",
+  {
+    agentId: text("agent_id").notNull(),
+    skillId: text("skill_id").notNull()
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.agentId, t.skillId] })
+  })
+);
+
 export const eventsTable = sqliteTable("events", {
   id: text("id").primaryKey(),
   seq: integer("seq").notNull().unique(),

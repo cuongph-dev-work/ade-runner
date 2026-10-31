@@ -29,6 +29,7 @@ export interface TestHubContext {
   projectId: string;
   channelId: string;
   threadId: string;
+  repoDir: string;
   bundle: HubServerBundle;
   daemon: LocalRunnerDaemon;
   close: () => Promise<void>;
@@ -161,6 +162,7 @@ rules:
     projectId: project.id,
     channelId: channel.id,
     threadId: threadRes.thread.id,
+    repoDir,
     bundle,
     daemon,
     close: async () => {

@@ -250,6 +250,27 @@ CREATE TABLE IF NOT EXISTS agent_scratchpads (
   updated_at TEXT NOT NULL,
   PRIMARY KEY (thread_id, agent_id)
 );
+
+CREATE TABLE IF NOT EXISTS skills (
+  id TEXT PRIMARY KEY NOT NULL,
+  project_id TEXT,
+  name TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  path TEXT NOT NULL,
+  description TEXT NOT NULL,
+  has_shell_script INTEGER NOT NULL DEFAULT 0,
+  content_hash TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_skills_project_scope
+  ON skills(project_id, scope);
+
+CREATE TABLE IF NOT EXISTS agent_skills (
+  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+  PRIMARY KEY (agent_id, skill_id)
+);
 `;
 
 export function openHubDatabase(dbPath: string): HubDatabase {

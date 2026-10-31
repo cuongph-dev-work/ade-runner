@@ -7,3 +7,4 @@ export * from "./schemas/mcp.js";
 export * from "./schemas/ade-config.js";
 export * from "./schemas/chat.js";
 export * from "./schemas/orchestration.js";
+export * from "./schemas/settings.js";

@@ -45,6 +45,8 @@ import { PermissionCard } from "./cards/PermissionCard.js";
 import { QuestionCard } from "./cards/QuestionCard.js";
 import { ExplorerCard } from "./cards/ExplorerCard.js";
 import { ApprovalGateCard } from "./cards/ApprovalGateCard.js";
+import { ProjectWizardModal } from "./modals/ProjectWizardModal.js";
+import { ProjectSettingsModal } from "./modals/ProjectSettingsModal.js";
 import {
   computeThreadRunSummary,
   isAgentRunning,
@@ -119,6 +121,12 @@ export function ChatWorkspace({
   );
   const [openPickerMsgId, setOpenPickerMsgId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Array<{ id: number; text: string }>>([]);
+  const [isWizardOpen, setIsWizardOpen] = useState(
+    () => window.location.pathname === "/projects/new"
+  );
+  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(
+    () => window.location.pathname.includes("/settings")
+  );
 
   const pushToast = (text: string): void => {
     const id = Date.now() + Math.random();
@@ -135,6 +143,11 @@ export function ChatWorkspace({
       window.history.pushState(null, "", nextPath);
     }
     setPathname(nextPath);
+    if (nextPath === "/projects/new") {
+      setIsWizardOpen(true);
+    } else if (nextPath.includes("/settings")) {
+      setIsProjectSettingsOpen(true);
+    }
   };
 
   useEffect(() => {
@@ -598,10 +611,13 @@ export function ChatWorkspace({
             <button
               type="button"
               data-testid="add-project-btn"
-              aria-label="Thêm dự án"
+              aria-label="Tạo dự án mới"
               className="ade-rail-item"
-              disabled
-              title="Wizard tạo dự án mở ở Phase P5"
+              title="Tạo dự án mới"
+              onClick={() => {
+                setIsWizardOpen(true);
+                navigate("/projects/new");
+              }}
             >
               +
             </button>
@@ -623,8 +639,11 @@ export function ChatWorkspace({
               data-testid="project-settings-btn"
               className="ade-rail-item"
               aria-label="Cài đặt dự án"
-              disabled
-              title="Cài đặt dự án mở ở Phase P5"
+              title="Cài đặt dự án"
+              onClick={() => {
+                setIsProjectSettingsOpen(true);
+                navigate(`/projects/${activeProject.id}/settings?tab=general`);
+              }}
             >
               ⚙
             </button>
@@ -1038,6 +1057,38 @@ export function ChatWorkspace({
       )}
 
       {/* Modals */}
+      {isWizardOpen && (
+        <ProjectWizardModal
+          onClose={() => {
+            setIsWizardOpen(false);
+            if (window.location.pathname === "/projects/new") {
+              navigate(`/projects/${activeProject.id}/channels/${activeChannel?.id ?? ""}`);
+            }
+          }}
+          onProjectCreated={(newProjectId) => {
+            setIsWizardOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["projects"] });
+            navigate(`/projects/${newProjectId}/settings?tab=agents`);
+            setIsProjectSettingsOpen(true);
+          }}
+        />
+      )}
+
+      {isProjectSettingsOpen && (
+        <ProjectSettingsModal
+          projectId={activeProject.id}
+          initialTab={
+            (new URLSearchParams(window.location.search).get("tab") as any) || "general"
+          }
+          onClose={() => {
+            setIsProjectSettingsOpen(false);
+            if (window.location.pathname.includes("/settings")) {
+              navigate(`/projects/${activeProject.id}/channels/${activeChannel?.id ?? ""}`);
+            }
+          }}
+        />
+      )}
+
       {createModalOpen && (
         <CreateChannelModal
           submitting={createChannelMut.isPending}
