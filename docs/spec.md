@@ -263,8 +263,8 @@ Runner inject MCP server này vào mọi session qua `session/new` (`mcpServers`
 | --- | --- | --- | --- | --- |
 | `report_outcome` | status (done/blocked/needs\_revision), summary, decisions\[\] | ok | ghi vào `runs.outcome`, đi kèm `run.completed` | mọi agent; gọi cuối mỗi run |
 | `post_progress` | text, step?, percent? | ok | `run.progress` | mọi agent |
-| `post_message` | text, kind? (note/result) | message\_id | `message.posted` | mọi agent |
-| `ask_human` | question, options\[\]?, timeout\_s? | answer (chờ đến khi có) | `question.asked` → `approval.resolved` | mọi agent |
+| `post_message` | text, kind? (note/result/explorer\_card), explorer? (topic, flow\_steps\[\], trace\_steps\[\]?, citations\[\]) | message\_id | `message.posted` | mọi agent |
+| `ask_human` | question, options\[\]?, questions\[\]? (single/multi/text + allow\_other + suggestions\[\]), timeout\_s? | answer, option\_id?, answers\[\]? (chờ đến khi có) | `question.asked` → `question.answered` / `question.timed_out` | mọi agent |
 | `read_memory` | scope (project/thread), query? | entries\[\] | — | mọi agent |
 | `propose_memory` | scope, content, reason | proposal\_id | `memory.proposed` | mọi agent; người duyệt mới ghi |
 | `get_thread` | include\_messages? (n) | title, state, summary, messages\[\] | — | mọi agent |

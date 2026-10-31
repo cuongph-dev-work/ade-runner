@@ -1,212 +1,238 @@
-# Message & Validation Catalog
+# Message & Error Catalog — ADE Solo MVP
 
-**SSOT** mã message (MSG*) + quy tắc validate dùng chung cho UI/API DD và code.
+**SSOT** mã thông báo kiểm tra hợp lệ (`MSG*`) và mã lỗi nghiệp vụ (`ERR_*`) dùng chung cho mọi UI/API DD và mã nguồn trong `ade-runner`.
 
-| Layer | Path |
-|-------|------|
+| Tầng | Đường dẫn dự kiến |
+| --- | --- |
 | Spec (đọc/duyệt) | `specs/message.md` (file này) |
-| Machine-readable | `packages/contracts/src/validation-catalog.ts` |
-| API business errors | `packages/contracts/src/error-messages.ts` (`ERROR_CODES`) |
-| FE copy | `apps/web/src/i18n/{ja,en}.ts` — map MSG / catalog |
+| Validation catalog (Zod + rule) | `packages/shared/src/validation-catalog.ts` |
+| Mã lỗi API & MCP (`ERROR_CODES`) | `packages/shared/src/error-codes.ts` |
+| Bản dịch UI tiếng Việt | `apps/web/src/i18n/vi.ts` (`translateApiError`, `resolveMsg`) |
 
-Cook / FE / BE **không** hardcode chuỗi “bắt buộc” rời — lấy từ catalog.
-
----
-
-## 1. Message template (MSG*)
-
-| Mã | Template VI | Template JA | Template EN | Dùng khi |
-|----|-------------|-------------|-------------|----------|
-| **MSG01** | `{field} là bắt buộc.` | `{field}は必須です。` | `{field} is required.` | `required` · `min:1` (chuỗi rỗng) |
-| **MSG04** | `Định dạng {field} không hợp lệ.` | `{field}の形式が正しくありません。` | `{field} format is invalid.` | `email` · `max` · `min` (số) · `in:` · `integer` · `boolean` · `date` · regex |
-| **MSG14** | `Cập nhật thành công.` | `更新しました。` | `Updated successfully.` | Toast success (optional) |
-| **MSG19** ※ | Đăng nhập thất bại… | ログインに失敗… | Login failed… | Auth credentials |
-| **MSG20** | Tài khoản bị khóa… | アカウントがロック… | Account locked… | Auth locked |
-| **MSG_PASSWORD_MIN_8** | `Mật khẩu tối thiểu 8 ký tự.` | `パスワードは8文字以上で入力してください。` | `Password must be at least 8 characters long.` | `password` · `min:8` |
-
-`{field}` = nhãn field (bảng §2), **không** dùng technical key thô trên UI.
+UI và Hub **không** hardcode chuỗi lỗi rời rạc; mọi thông báo đều tra qua `MSG*` hoặc `ERR_*`.
 
 ---
 
-## 2. Field labels (`{field}`)
+## 1. Message template (`MSG*`)
 
-| Key | VI | JA | EN |
-|-----|----|----|-----|
-| `name` | Họ tên | 氏名 | Name |
-| `email` | Email | メールアドレス | Email |
-| `password` | Mật khẩu | パスワード | Password |
-| `role` | Vai trò | ロール | Role |
-| `status` | Trạng thái | 状態 | Status |
-| `company_id` | Công ty | 会社 | Company |
-| `permissionKey` | Mã màn hình | 画面コード | Permission key |
-| `allowed` | Cho phép | 許可 | Allowed |
-| `username` | Account ID | アカウントID | Account ID |
-| `page` / `pageSize` / `search` / `id` | … | … | … |
+| Mã | Template tiếng Việt | Dùng khi |
+| --- | --- | --- |
+| **MSG01** | `{field} là bắt buộc.` | `required` · `min:1` (chuỗi rỗng sau khi `trim`) |
+| **MSG02** | `{field} không được vượt quá {max} ký tự.` | `max:N` (độ dài chuỗi) |
+| **MSG03** | `{field} phải có ít nhất {min} ký tự.` | `min:N` (`N > 1`, độ dài chuỗi) |
+| **MSG04** | `Định dạng {field} không hợp lệ.` | `regex:...` · `integer` · `number` · `boolean` · `in:...` · `min:N`/`max:N` (giá trị số) |
+| **MSG06** | `Đường dẫn {field} không tồn tại hoặc không phải kho Git hợp lệ.` | Kiểm tra `repoPath` phía client/form |
+| **MSG07** | `Nội dung {field} không đúng cú pháp YAML.` | Kiểm tra cú pháp YAML trong editor Workflow / Config |
+| **MSG08** | `Tên skill chỉ được gồm chữ thường, số và dấu gạch ngang (không chứa khoảng trắng, dấu ngoặc, dấu phẩy).` | `regex:^[a-z0-9]+(?:-[a-z0-9]+)*$` trên tên skill |
+| **MSG14** | `Đã lưu thay đổi.` | Toast thành công khi cập nhật cấu hình / memory / workflow |
+| **MSG15** | `Đã tạo thành công.` | Toast thành công khi tạo project / channel / thread / agent / skill |
+| **MSG16** | `Đã gửi phản hồi duyệt.` | Toast thành công khi bấm nút trên Approval Card / Permission Card / Memory Card |
 
-Mở rộng label trong `FIELD_LABELS` (contracts) khi thêm field DD.
+`{field}` được thay bằng nhãn tiếng Việt trong bảng §2 (không hiển thị tên biến kỹ thuật thô lên giao diện).
+
+---
+
+## 2. Nhãn trường (`FIELD_LABELS`)
+
+| Key kỹ thuật | Nhãn tiếng Việt (`{field}`) |
+| --- | --- |
+| `name` | Tên |
+| `projectName` | Tên dự án |
+| `repoPath` | Đường dẫn kho mã nguồn |
+| `defaultBranch` | Nhánh mặc định |
+| `defaultMainAgent` | Main agent mặc định |
+| `defaultWorkflow` | Workflow mặc định |
+| `channelName` | Tên kênh |
+| `title` | Tiêu đề |
+| `body` | Nội dung tin nhắn |
+| `handle` | Handle của agent |
+| `displayName` | Tên hiển thị |
+| `role` | Mô tả vai trò |
+| `harness` | Harness |
+| `model` | Model |
+| `credentialProfile` | Hồ sơ xác thực |
+| `skills` | Danh sách skill |
+| `maxDepth` | Độ sâu gọi tối đa |
+| `budgetUsd` | Ngân sách (USD) |
+| `timeoutS` | Thời gian chờ tối đa (giây) |
+| `skillName` | Tên skill |
+| `description` | Mô tả |
+| `skillContent` | Nội dung SKILL.md |
+| `sourcePath` | Đường dẫn nguồn |
+| `gitUrl` | Địa chỉ Git |
+| `workflowYaml` | Nội dung Workflow YAML |
+| `comment` | Ghi chú phản hồi |
+| `optionId` | Lựa chọn |
+| `answer` | Câu trả lời |
+| `targetFile` | Tên tệp memory |
+| `content` | Nội dung |
+| `reason` | Lý do đề xuất |
+| `decision` | Quyết định |
+| `scope` | Phạm vi ngữ cảnh |
+| `task` | Nhiệm vụ giao việc |
+| `expects` | Kết quả kỳ vọng |
+| `kind` | Loại cổng duyệt |
+| `runId` | Mã phiên chạy |
+| `limit` | Giới hạn số dòng |
+| `inputs` | Dữ liệu đầu vào |
+| `delegationId` | Mã đợt giao việc |
+| `artifacts` | Tài liệu đính kèm |
+| `options` | Danh sách lựa chọn |
+| `to` | Trạng thái đích |
+| `reasonText` | Lý do chuyển trạng thái |
+| `agent` | Agent nhận việc |
+| `threadId` | Mã thread |
+| `projectId` | Mã dự án |
+| `channelId` | Mã kênh |
+| `requestId` | Mã yêu cầu quyền |
+| `questionId` | Mã câu hỏi |
+| `approvalId` | Mã yêu cầu duyệt |
+| `proposalId` | Mã đề xuất ghi nhớ |
+| `workflowId` | Mã workflow |
+| `fileName` | Tên tệp |
+| `status` | Trạng thái |
+| `summary` | Bản tóm tắt |
+| `decisions` | Danh sách quyết định |
+| `text` | Nội dung |
+| `step` | Bước thực hiện |
+| `percent` | Phần trăm tiến độ |
+| `question` | Câu hỏi |
+| `query` | Từ khóa truy vấn |
+| `includeMessages` | Số lượng tin nhắn đính kèm |
+| `avatar` | Avatar |
+| `zipBase64` | Tệp nén ZIP |
+| `mode` | Chế độ nhập |
+| `overwrite` | Ghi đè |
+| `templateId` | Bộ mẫu agent |
+| `useRepoInstructions` | Dùng hướng dẫn của kho mã nguồn |
+| `agentId` | Mã agent |
+| `write` | Quyền ghi |
+| `canBeMain` | Quyền main agent |
+| `enabled` | Trạng thái bật |
+| `mcpAllow` | Danh sách công cụ MCP |
+| `emoji` | Biểu cảm |
+| `memberUserIds` | Danh sách đồng nghiệp |
+| `memberAgentIds` | Danh sách agent |
+| `messageId` | Mã tin nhắn |
+| `explorer` | Thẻ giải thích mã nguồn |
+| `topic` | Chủ đề giải thích |
+| `flowSteps` | Các bước luồng xử lý |
+| `traceSteps` | Nhật ký tra cứu |
+| `citations` | Danh sách trích dẫn mã nguồn |
+| `questions` | Danh sách câu hỏi làm rõ |
+| `answers` | Danh sách câu trả lời |
+| `otherText` | Câu trả lời khác |
 
 ---
 
 ## 3. Rule tokens (cột “Quy tắc kiểm tra” trong DD)
 
-Mỗi dòng **một** rule (xem `reference.md`).
+Mỗi dòng bảng Validate chỉ ghi **đúng một** rule token:
 
-| Rule token | Ý nghĩa | MSG mặc định |
-|------------|---------|--------------|
-| `required` | Bắt buộc | MSG01 |
-| `trim` | Chuẩn hóa trước validate | — (kèm required/min) |
-| `min:N` | Độ dài/số ≥ N | MSG01 nếu N=1 chuỗi; MSG_PASSWORD_MIN_8 nếu password≥8; else MSG04 |
-| `max:N` | Độ dài/số ≤ N | MSG04 |
-| `email` | Định dạng email | MSG04 |
-| `integer` | Số nguyên | MSG04 |
-| `boolean` | true/false | MSG04 |
-| `date` | Ngày hợp lệ | MSG04 |
-| `in:a,b,c` | Enum | MSG04 |
-| `regex:…` | Pattern | MSG04 |
-| `immutable` | Cấm đổi (vd. email PATCH) | ERR_* / MSG04 |
-| `nullable` | Cho phép null/omit | MSG — (không message) |
+| Rule token | Ý nghĩa | Mã MSG mặc định |
+| --- | --- | --- |
+| `required` | Bắt buộc có mặt và khác rỗng | `MSG01` |
+| `trim` | Cắt khoảng trắng hai đầu trước khi kiểm tra | `—` |
+| `min:1` | Chuỗi sau `trim` có độ dài ≥ 1 | `MSG01` |
+| `min:N` (chuỗi, `N > 1`) | Độ dài chuỗi ≥ `N` | `MSG03` |
+| `max:N` (chuỗi) | Độ dài chuỗi ≤ `N` | `MSG02` |
+| `min:N` (số) | Giá trị số ≥ `N` | `MSG04` |
+| `max:N` (số) | Giá trị số ≤ `N` | `MSG04` |
+| `integer` | Số nguyên | `MSG04` |
+| `number` | Số thực hợp lệ (không `NaN`/`Infinity`) | `MSG04` |
+| `boolean` | Kiểu logic `true` / `false` | `MSG04` |
+| `array` | Giá trị phải là mảng JSON hợp lệ | `MSG04` |
+| `in:a,b,c` | Thuộc tập giá trị liệt kê | `MSG04` |
+| `regex:<pattern>` | Khớp biểu thức chính quy | `MSG04` (riêng `skillName` dùng `MSG08`) |
+| `yaml` | Cú pháp YAML parse thành công | `MSG07` |
+| `nullable` | Cho phép `null` hoặc bỏ qua trường tùy chọn | `—` |
 
 ---
 
-## 4. Catalog form (collect khi cook)
+## 4. Danh mục `VALIDATION_CATALOG` (`packages/shared`)
 
-Nguồn code: `VALIDATION_CATALOG` trong contracts.
+| Catalog key | Module / Phase | Dùng ở |
+| --- | --- | --- |
+| `chat.channel.create` | `chat` (P1) | `POST /api/projects/:projectId/channels`, modal tạo channel |
+| `chat.channel.update` | `chat` (P1) | `PATCH /api/channels/:channelId`, modal cài đặt channel |
+| `chat.thread.create` | `chat` (P1) | `POST /api/channels/:channelId/threads`, khung nhập tin nhắn gốc của channel |
+| `chat.message.create` | `chat` (P1) | `POST /api/threads/:threadId/messages`, khung nhập phản hồi trong thread |
+| `chat.message.react` | `chat` (P1) | `POST /api/messages/:messageId/reactions`, thanh biểu cảm trên tin nhắn |
+| `runner.permission.reply` | `runner` (P2) | `POST /api/runs/:runId/permissions/:requestId/reply`, Permission Card |
+| `trigger.question.reply` | `trigger` (P3) | `POST /api/threads/:threadId/questions/:questionId/reply`, Question Card |
+| `trigger.mcp.reportOutcome` | `trigger` (P3) | MCP tool `report_outcome` |
+| `trigger.mcp.postProgress` | `trigger` (P3) | MCP tool `post_progress` |
+| `trigger.mcp.postMessage` | `trigger` (P3) | MCP tool `post_message` |
+| `trigger.mcp.askHuman` | `trigger` (P3) | MCP tool `ask_human` |
+| `trigger.mcp.readMemory` | `trigger` (P3) | MCP tool `read_memory` |
+| `trigger.mcp.getThread` | `trigger` (P3) | MCP tool `get_thread` |
+| `trigger.mcp.loadSkill` | `trigger` (P3) | MCP tool `load_skill` |
+| `trigger.mcp.setState` | `trigger` (P3) | MCP tool `set_state` |
+| `orchestration.approval.decide` | `orchestration` (P4) | `POST /api/approvals/:approvalId/decide`, Approval Gate Card |
+| `orchestration.mcp.delegate` | `orchestration` (P4) | MCP tool `delegate` |
+| `orchestration.mcp.getResults` | `orchestration` (P4) | MCP tool `get_results` |
+| `orchestration.mcp.requestApproval` | `orchestration` (P4) | MCP tool `request_approval` |
+| `orchestration.mcp.getRunLog` | `orchestration` (P4) | MCP tool `get_run_log` |
+| `orchestration.mcp.writeScratchpad` | `orchestration` (P4) | MCP tool `write_scratchpad` |
+| `orchestration.chat.command` | `orchestration` (P4) | Slash commands `/main`, `/approve`, `/revise` |
+| `settings.project.create` | `settings` (P5) | `POST /api/projects` (Wizard 3 bước) |
+| `settings.project.update` | `settings` (P5) | `PATCH /api/projects/:projectId/general`, Tab General |
+| `settings.agent.upsert` | `settings` (P5) | `POST` / `PUT` `/api/projects/:projectId/agents`, Form Agent |
+| `settings.skill.upsert` | `settings` (P5) | `POST` / `PUT` `/api/projects/:projectId/skills`, Skill Editor |
+| `settings.skill.import` | `settings` (P5) | `POST /api/projects/:projectId/skills/import` |
+| `memory.file.put` | `memory` (P6) | `PUT /api/projects/:projectId/memory/:fileName`, Tab Memory |
+| `memory.proposal.decide` | `memory` (P6) | `POST /api/memory-proposals/:proposalId/decide`, Memory Card |
+| `memory.mcp.propose` | `memory` (P6) | MCP tool `propose_memory` |
+| `memory.workflow.put` | `memory` (P6) | `PUT /api/projects/:projectId/workflows/:workflowId`, Tab Workflow |
 
-| Catalog key | Form / API | Ghi chú |
-|-------------|------------|---------|
-| `auth.login` | Login | username/password |
-| `user.create` | POST `/api/users` · modal tạo | CM-06 |
-| `user.update` | PATCH `/api/users/:id` · modal sửa | name required khi gửi |
-| `user.listQuery` | GET list query | page/pageSize/search/role/status |
-| `settings.permission.put` | PUT permissions | role/permissionKey/allowed |
+---
 
-**Cách cook thu thập:**
+## 5. Bảng mã lỗi nghiệp vụ (`ERROR_CODES`)
 
-```ts
-import { collectRules, resolveMsg, resolveZodIssueMessage } from "@ai-filldata/contracts";
+Mọi phản hồi lỗi HTTP từ `apps/hub` (cả REST `/api/*` và MCP `/mcp`) trả về body chuẩn `ApiErrorResponseSchema`:
 
-const rules = collectRules("user.create");
-// → Zod schema + FE fieldErrors + DD § Validate rows
+```json
+{
+  "code": "ERR_...",
+  "message": "...",
+  "details": {}
+}
 ```
 
-DD §II Validate: mỗi dòng = 1 phần tử catalog (`field` · `rule` · `msg`).
-
----
-
-## 5. CM-06 Users — bảng rule đầy đủ (tham chiếu)
-
-### Create (`user.create`)
-
-| field | rule | msg | Text JA (resolve) |
-|-------|------|-----|-------------------|
-| name | required / min:1 | MSG01 | 氏名は必須です。 |
-| name | max:100 | MSG04 | 氏名の形式が正しくありません。 |
-| email | required | MSG01 | メールアドレスは必須です。 |
-| email | email / max:200 | MSG04 | メールアドレスの形式が正しくありません。 |
-| role | required | MSG01 | ロールは必須です。 |
-| role | in:admin,staff,bpo_operator | MSG04 | ロールの形式が正しくありません。 |
-| password | required | MSG01 | パスワードは必須です。 |
-| password | min:8 | MSG_PASSWORD_MIN_8 | パスワードは8文字以上… |
-| password | max:200 | MSG04 | … |
-
-### Update (`user.update`)
-
-| field | rule | msg |
-|-------|------|-----|
-| name | required / min:1 (khi gửi) | MSG01 |
-| name | max:100 | MSG04 |
-| role | in:… | MSG04 |
-| status | in:active,inactive | MSG04 |
-| password | min:8 nếu có | MSG_PASSWORD_MIN_8 |
-| email | immutable | `ERR_EMAIL_IMMUTABLE` |
-
-### Business errors (không phải MSG template)
-
-| Code | HTTP | Khi |
-|------|------|-----|
-| `ERR_EMAIL_EXISTS` | 409 | Trùng email |
-| `ERR_LAST_ADMIN` | 409 | Hạ/xóa admin cuối công ty |
-| `ERR_EMAIL_IMMUTABLE` | 400 | PATCH có `email` |
-| `ERR_USER_NOT_FOUND` | 404 | Ngoài scope / soft-deleted |
-
----
-
-## 6. ERROR_CODES (API)
-
-Xem đầy đủ `packages/contracts/src/error-messages.ts`.  
-DD API § lỗi: ghi **ERROR_CODE** + HTTP; UI toast map qua `translateApiError`.
-UI tuyệt đối **không hiển thị thô `err.message`** từ server khi bắt lỗi (catch) mà phải qua `translateApiError` hoặc `translateValidationMessage`.
-
----
-
-## 7. Quy chuẩn giao tiếp đa ngôn ngữ (HTTP i18n)
-
-1. **Frontend (Client)**:
-   - Mọi HTTP request (bao gồm `apiFetch` và các request tải tệp nhị phân) phải tự động đính kèm header `Accept-Language` tương ứng với ngôn ngữ đang chọn trên giao diện (`ja` hoặc `en`).
-2. **Backend (API)**:
-   - Phân giải header `Accept-Language` qua middleware/context (mặc định fallback là `ja`).
-   - `ZodValidationPipe` tự động áp dụng locale từ request context để sinh thông điệp `messages` qua `resolveZodIssueMessage(issue, locale, labelOverrides)`.
-   - Tránh hardcode chuỗi message ngôn ngữ cụ thể trong controller hoặc service.
-
----
-
-## 8. Quy trình khi thêm field / form mới
-
-1. Thêm label vào `FIELD_LABELS` (contracts) + i18n FE nếu cần copy riêng.
-2. Thêm rules vào `VALIDATION_CATALOG["module.action"]`.
-3. DD § Validate: copy rows từ catalog (field · rule · MSG).
-4. Zod schema: mirror rule tokens.
-5. FE: `safeParse` + `resolveZodIssueMessage` (hoặc `resolveMsg`).
-6. Không invent message ad-hoc trên UI.
-
----
-
-## 9. API ERROR list (rút gọn — full trong contracts)
-
-| Mã | HTTP | Điều kiện |
-|----|------|-----------|
-| `INVALID_CREDENTIALS` | 401 | Sai login |
-| `COMPANY_INACTIVE` | 403 | Company inactive non-admin |
-| `ERR_FORBIDDEN` | 403 | Thiếu quyền |
-| `ERR_VALIDATION` | 400/422 | Zod fail |
-| `ERR_EMAIL_EXISTS` | 409 | Email trùng |
-| `ERR_LAST_ADMIN` | 409 | Admin cuối |
-| `ERR_EMAIL_IMMUTABLE` | 400 | Đổi email |
-| `ERR_USER_NOT_FOUND` | 404 | User không thấy |
-| `ARTIFACT_NOT_AVAILABLE` | 409 | FillJob chưa sinh thành phẩm hoặc đang xử lý |
-| `ERR_ARTIFACT_NOT_FOUND` | 404 | Tệp thành phẩm không tồn tại trong storage |
-| `ERR_REVIEW_NOT_VERIFIED` | 400 | Tệp chưa được BPO duyệt, bị khóa tải xuống |
-| `JOB_FAILED` | 400 | Job thất bại, không có thành phẩm/báo cáo |
-| `REPORT_NOT_READY` | 400 | Báo cáo điền chưa sẵn sàng |
-| `SCAN_PENDING_REVIEW` | 409 | 自治体 có version `DRAFT` chờ duyệt, không được scan — `レビュー待ちの版があるため、スキャンできません。` |
-| `MANUAL_UPLOAD_DUPLICATE` | 409 | Upload tay trùng tập file của version đã có — `同じファイル構成の版が既に存在します。` |
-| `SOURCE_DOCUMENT_NOT_FOUND` | 404 | File template không tồn tại / không thuộc version nào — `指定されたファイルが見つかりません。` |
-| `MANUAL_UPLOAD_ANALYSIS_NOT_FOUND` | 404 | Phiên phân tích upload tay không tồn tại / hết hạn — `解析セッションが見つかりません。もう一度ファイルを選択してください。` |
-| `MANUAL_UPLOAD_ANALYSIS_NOT_READY` | 409 | Phiên phân tích chưa hoàn thành — `解析が完了していません。しばらくお待ちください。` |
-| `MANUAL_UPLOAD_ANALYSIS_CANCELLED` | 409 | Phiên phân tích đã bị hủy — `解析はキャンセルされました。もう一度ファイルを選択してください。` |
-| `MANUAL_UPLOAD_ANALYSIS_EXPIRED` | 409 | Phiên phân tích hết hạn — `解析セッションの有効期限が切れました。もう一度ファイルを選択してください。` |
-| `MANUAL_UPLOAD_ANALYSIS_SUBMITTED` | 409 | Phiên phân tích đã được submit trước đó — `このファイルは既に登録されています。` |
-| `MANUAL_UPLOAD_ANALYSIS_NOT_RETRYABLE` | 409 | Phiên phân tích không thể retry (chỉ FAILED mới retry) — `この解析は再実行できません。` |
-| `FILL_JOB_NOT_RETRYABLE` | 409 | Retry FillJob không ở trạng thái `failed` — `このジョブは再実行できません。` |
-| `FILL_RECORD_CONTEXT_INVALID` | 422 | `recordContext` trỏ bản ghi không thuộc company / đã xóa / manager ngoài ứng viên (`details.invalid`) — `選択された対象データが見つかりません。` |
-| `FILL_RECORD_CONTEXT_REQUIRED` | 422 | Thiếu 営業所 / 担当者 / 管理者 bắt buộc (`details.missing`) — `対象の営業所・担当者を選択してください。` |
-| `FILL_JOB_INPUT_REQUIRED` | 422 | Thiếu `job_input` bắt buộc (`details.keys`) — `必須の入力項目が未入力です。` |
-| `DEFINE_SPLIT_INCOMPLETE` | 409 | Verify schema Excel khi còn field vừa có `db_column` vừa có `split_incomplete` — `分割セルの変換が揃っていません。` |
-| `ERR_INVALID_STATUS` | 400 | Thao tác không hợp lệ với trạng thái hiện tại của thực thể (`dd/domain-model.md` §9) |
-| `ERR_CHECKLIST_INCOMPLETE` | 400 | Hoàn tất Review khi còn FeedbackItem `isVerified = false` |
-| `ERR_SUBMISSION_NOT_READY` | 400 | Nộp khi Review chưa `verified` hoặc requirement chưa `ready` |
-| `ERR_ALREADY_SUBMITTED` | 400 | Nộp hồ sơ đã `submitted` |
-| `ERR_NOT_SUBMITTED` | 400 | Huỷ nộp hồ sơ chưa `submitted` |
-| `QUALIFICATION_CONFIRMATION_REQUIRED` | 409 | Bàn giao sang Define khi bundle chưa xác nhận qualification |
-| `PREVIOUS_SELECTION_REQUIRED` | 409 | Bàn giao sang Define khi bundle chưa xác nhận bản trước |
-| … | | (contracts) |
-
-`FILL_TIMEOUT`, `QUEUE_ENQUEUE_FAILED` là giá trị `FillJob.errorCode`, không phải mã HTTP.
-
-| ERR_DOCUMENT_CODE_EXISTS | Mã chứng từ đã tồn tại trong công ty. |
-| ERR_DOCUMENT_NOT_FOUND | Không tìm thấy chứng từ. |
-| ERR_DOCUMENT_LINKED | Chứng từ đang được liên kết ma trận; không xóa được. |
-| ERR_MATRIX_ROW_NOT_FOUND | Không tìm thấy dòng ma trận. |
-| ERR_DOCUMENT_KIND_MISMATCH | Mã chứng từ không khớp kind yêu cầu. |
-
-
+| Mã lỗi (`code`) | HTTP | Module chính | Điều kiện kích hoạt | Thông điệp tiếng Việt mặc định (`translateApiError`) |
+| --- | --- | --- | --- | --- |
+| `ERR_LOCAL_ORIGIN_ONLY` | 403 | Chung | Request đến `/api/*` hoặc `/ws` từ `Origin` hoặc `Host` khác `localhost` / `127.0.0.1` ở `ADE_MODE=solo` | `ADE ở chế độ Solo chỉ cho phép truy cập từ localhost.` |
+| `ERR_INTERNAL_ERROR` | 500 | Chung | Lỗi truy vấn cơ sở dữ liệu hoặc lỗi không mong đợi ở tầng server | `Lỗi hệ thống nội bộ.` |
+| `ERR_VALIDATION` | 422 | Chung | Request params/query/body không vượt qua kiểm tra Zod schema | `Dữ liệu gửi lên không hợp lệ.` |
+| `ERR_NOT_FOUND` | 404 | Chung | Không tìm thấy tài nguyên theo ID (`project`, `channel`, `thread`, `run`, `agent`, `skill`, `approval`, `proposal`) | `Không tìm thấy dữ liệu yêu cầu.` |
+| `ERR_INVALID_STATUS` | 400 | Chung | Chuyển trạng thái thực thể không nằm trong bảng chuyển hợp lệ của State Machine | `Thao tác không hợp lệ với trạng thái hiện tại.` |
+| `ERR_PROJECT_PATH_INVALID` | 400 | `chat` / `settings` | `repoPath` không tồn tại trên đĩa hoặc không chứa kho Git hợp lệ (`.git`) | `Đường dẫn không tồn tại hoặc chưa khởi tạo Git.` |
+| `ERR_PROJECT_ALREADY_EXISTS` | 409 | `settings` | Đã có project quản lý cùng `repoPath` trong Hub | `Kho mã nguồn này đã được thêm vào ADE.` |
+| `ERR_ADE_CONFIG_INVALID` | 422 | `chat` / `settings` | File YAML trong `.ade/` sai cú pháp hoặc sai schema khi đọc/ghi | `Tệp cấu hình trong .ade/ không hợp lệ.` |
+| `ERR_CHANNEL_NAME_EXISTS` | 409 | `chat` | Tạo hoặc đổi tên channel trùng `name` trong cùng `project_id` | `Tên kênh đã tồn tại trong dự án này.` |
+| `ERR_LAST_CHANNEL_DELETE` | 409 | `chat` | Xóa channel duy nhất còn hoạt động trong `project_id` | `Dự án phải giữ lại ít nhất 1 kênh hoạt động.` |
+| `ERR_RUNNER_UNAVAILABLE` | 503 | `runner` | Runner chưa sẵn sàng hoặc harness yêu cầu chưa khả dụng trên máy | `Runner hoặc harness chưa sẵn sàng để khởi chạy agent.` |
+| `ERR_CREDENTIAL_MODE_MISMATCH` | 400 | `runner` | Dùng profile `sub-*` khi `ADE_MODE=vps` hoặc profile không tồn tại | `Hồ sơ xác thực không được phép trong chế độ hiện tại.` |
+| `ERR_PERMISSION_ALREADY_RESOLVED` | 409 | `runner` | Bấm trả lời `request_permission` đã được quyết định hoặc run không còn chờ quyền | `Yêu cầu cấp quyền này đã được xử lý trước đó.` |
+| `ERR_RUN_NOT_CANCELLABLE` | 409 | `runner` | Huỷ run đã ở trạng thái kết thúc (`completed`, `failed`, `cancelled`) | `Run đã kết thúc nên không thể huỷ.` |
+| `ERR_RUN_TIMEOUT` | 408 | `runner` / `orchestration` | Thời gian chạy của run vượt quá `runs.timeout_s` (chốt từ `timeout_s` giao việc hoặc `agents.timeout_s`) | `Run đã vượt quá thời gian thực thi cho phép.` |
+| `ERR_DRIVER_EXECUTION` | 500 | `runner` | Tiến trình driver harness gặp lỗi runtime hay thoát mã khác `0` | `Tiến trình thực thi agent gặp lỗi ngoài dự kiến.` |
+| `ERR_MCP_TOKEN_INVALID` | 401 | `trigger` (MCP) | Thiếu hoặc sai chữ ký/giá trị `Bearer <mcp_token>` khi gọi `/mcp` | `Token kết nối ADE MCP không hợp lệ.` |
+| `ERR_MCP_TOKEN_EXPIRED` | 401 | `trigger` (MCP) | `mcp_token` gắn với run đã kết thúc hoặc quá hạn TTL | `Token kết nối ADE MCP đã hết hiệu lực.` |
+| `ERR_GRANT_REQUIRED` | 403 | `trigger` (MCP) | Agent chưa có grant active trong `thread_agents` của thread đang truy cập, hoặc gọi chéo sang thread khác | `Agent chưa được cấp quyền truy cập ngữ cảnh của thread này.` |
+| `ERR_FORBIDDEN_TOOL` | 403 | `trigger` (MCP) | Agent gọi tool không nằm trong `mcp_allow` (ví dụ `set_state` trong MVP) | `Agent không có quyền sử dụng công cụ này.` |
+| `ERR_QUESTION_TIMEOUT` | 408 | `trigger` | Hết `timeout_s` của `ask_human` mà người dùng chưa trả lời | `Đã hết thời gian chờ người dùng trả lời câu hỏi.` |
+| `ERR_QUESTION_ALREADY_RESOLVED` | 409 | `trigger` | Trả lời `question_card` đã có câu trả lời hoặc đã hết hạn | `Câu hỏi này đã được trả lời trước đó.` |
+| `ERR_LOOP_DEPTH_EXCEEDED` | 409 | `trigger` / `orchestration` | `depth` của run con vượt `agents.max_depth` (mặc định `3`) | `Đã chạm giới hạn độ sâu gọi agent tối đa (max_depth).` |
+| `ERR_CAUSATION_LIMIT_EXCEEDED` | 409 | `trigger` | Chuỗi `causation_id` vượt `20` sự kiện liên tiếp trong cùng thread (`engine_halted = true`) | `Rule engine đã tạm dừng do chuỗi sự kiện vượt quá giới hạn an toàn (20 bước).` |
+| `ERR_MAIN_AGENT_ONLY` | 403 | `orchestration` | Worker hoặc main agent cũ gọi `delegate`, `request_approval`, `get_results`, `get_run_log` | `Chỉ main agent hiện tại của thread mới được thực hiện thao tác này.` |
+| `ERR_AGENT_CANNOT_BE_MAIN` | 400 | `orchestration` | Lệnh `/main @x` chỉ định agent có `can_be_main = false` hoặc `enabled = false` | `Agent được chọn không có quyền làm main agent.` |
+| `ERR_GATE_APPROVAL_REQUIRED` | 409 | `orchestration` | Chuyển `threads.state` vượt qua cổng (`gate: plan \| spec \| review`) khi chưa có `approvals.status = 'approved'` đúng `kind` | `Không thể chuyển trạng thái khi cổng duyệt của người dùng chưa được chấp thuận.` |
+| `ERR_APPROVAL_PENDING_LOCK` | 409 | `orchestration` | Main agent gọi `delegate` mới trong khi thread đang có `approval` ở trạng thái `pending` | `Thread đang chờ người dùng duyệt cổng hiện tại, chưa thể giao việc mới.` |
+| `ERR_APPROVAL_ALREADY_DECIDED` | 409 | `orchestration` | Duyệt/từ chối một bản `approval` không còn ở trạng thái `pending` | `Yêu cầu duyệt này đã được quyết định trước đó.` |
+| `ERR_AGENT_HANDLE_EXISTS` | 409 | `settings` | Tạo/nhân bản agent có `handle` đã tồn tại trong project | `Handle của agent đã tồn tại trong dự án.` |
+| `ERR_SKILL_NAME_EXISTS` | 409 | `settings` | Tạo/import skill trùng `name` trong cùng `scope` (`project` hoặc `global`) mà không bật ghi đè | `Tên skill đã tồn tại trong thư viện.` |
+| `ERR_SKILL_IN_USE` | 409 | `settings` | Xóa skill đang được gắn trong `.ade/agents/*.yaml` | `Không thể xóa skill đang được gắn cho agent.` |
+| `ERR_WORKFLOW_INVALID` | 422 | `settings` / `memory` | File workflow YAML thiếu `initial`, state trong rule không khai báo ở `states`, hoặc agent tham chiếu không hợp lệ | `Cấu hình workflow không hợp lệ (thiếu state khởi tạo hoặc tham chiếu sai state/agent).` |
+| `ERR_BUDGET_EXCEEDED` | 409 | `memory` / `runner` | Chi phí luỹ kế vượt `agents.budget_usd` hoặc `threads.budget_usd` | `Đã vượt hạn mức ngân sách cho phép (budget_exceeded).` |
+| `ERR_MEMORY_PROPOSAL_DECIDED` | 409 | `memory` | Duyệt hoặc từ chối `memory_proposal` không còn ở trạng thái `pending` | `Đề xuất ghi nhớ này đã được xử lý trước đó.` |
