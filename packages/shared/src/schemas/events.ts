@@ -71,3 +71,64 @@ export const EventEnvelopeSchema = z.object({
   payload: z.record(z.string(), z.unknown())
 });
 export type EventEnvelope = z.infer<typeof EventEnvelopeSchema>;
+
+export const ProjectRegisteredPayloadSchema = z.object({
+  project_id: z.string().min(1),
+  name: z.string().min(1),
+  repo_path: z.string().min(1),
+  workflow_id: z.string().min(1)
+});
+
+export const ChannelCreatedPayloadSchema = z.object({
+  channel_id: z.string().min(1),
+  project_id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string(),
+  member_user_ids: z.array(z.string()),
+  member_agent_ids: z.array(z.string())
+});
+
+export const ChannelUpdatedPayloadSchema = ChannelCreatedPayloadSchema;
+
+export const ChannelDeletedPayloadSchema = z.object({
+  channel_id: z.string().min(1),
+  project_id: z.string().min(1)
+});
+
+export const ThreadCreatedPayloadSchema = z.object({
+  thread_id: z.string().min(1),
+  channel_id: z.string().min(1),
+  title: z.string().min(1),
+  initial_state: z.string().min(1),
+  workflow_id: z.string().min(1),
+  root_message_id: z.string().min(1)
+});
+
+export const MessagePostedPayloadSchema = z.object({
+  message_id: z.string().min(1),
+  kind: z.enum(["text", "system", "live_card", "explorer_card", "approval_card", "question_card"]),
+  body: z.string(),
+  is_root: z.boolean(),
+  mentions: z.array(z.string()),
+  human_mentions: z.array(z.string()),
+  card: z.record(z.string(), z.unknown()).nullable().optional()
+});
+
+export const MessageReactionToggledPayloadSchema = z.object({
+  message_id: z.string().min(1),
+  thread_id: z.string().min(1),
+  channel_id: z.string().min(1),
+  emoji: z.string().min(1),
+  actor_id: z.string().min(1),
+  added: z.boolean()
+});
+
+export const AgentMentionedPayloadSchema = z.object({
+  agent: z.string().startsWith("@"),
+  agent_id: z.string().min(1),
+  message_id: z.string().min(1),
+  text: z.string()
+});
+
+export const AdeEventSchema = EventEnvelopeSchema;
+export type AdeEvent = z.infer<typeof AdeEventSchema>;

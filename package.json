@@ -14,7 +14,8 @@
     "build": "pnpm --filter @ade/shared build && pnpm --filter @ade/runner build && pnpm --filter @ade/web build && pnpm --filter @ade/hub build",
     "test": "vitest run",
     "accept:p0": "pnpm build && tsx scripts/verify/p0-events-append-only.ts && playwright test e2e/p0-smoke.spec.ts",
-    "accept:all": "pnpm test && pnpm accept:p0",
+    "accept:p1": "pnpm build && tsx scripts/verify/replay-events.ts && tsx scripts/verify/mention-events.ts && playwright test e2e/p1-chat.spec.ts e2e/p1-mention.spec.ts e2e/p1-config-error.spec.ts",
+    "accept:all": "pnpm test && pnpm accept:p0 && pnpm accept:p1",
     "real:spike-claude": "tsx scripts/real/spike-claude.ts",
     "real:spike-codex": "tsx scripts/real/spike-codex.ts",
     "real:spike-codex-acp": "tsx scripts/real/spike-codex-acp.ts"

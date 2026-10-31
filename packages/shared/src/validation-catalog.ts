@@ -60,43 +60,66 @@ export const FIELD_LABELS: Record<string, string> = {
 };
 
 export interface ValidationRuleItem {
+  id: string;
   field: string;
+  jsonField: string;
   rule: string;
   msg?: MsgCode;
   params?: Record<string, string | number>;
 }
 
+export const ALLOWED_REACTION_EMOJIS = [
+  "👍",
+  "❤️",
+  "🔥",
+  "🚀",
+  "🎉",
+  "👀",
+  "✅",
+  "🙌"
+] as const;
+
+export type ReactionEmoji = (typeof ALLOWED_REACTION_EMOJIS)[number];
+
 export const VALIDATION_CATALOG = {
   "chat.channel.create": [
-    { field: "channelName", rule: "trim" },
-    { field: "channelName", rule: "required", msg: "MSG01" },
-    { field: "channelName", rule: "max:80", msg: "MSG02", params: { max: 80 } }
+    { id: "V-01", field: "channelName", jsonField: "name", rule: "trim" },
+    { id: "V-02", field: "channelName", jsonField: "name", rule: "required", msg: "MSG01" },
+    { id: "V-03", field: "channelName", jsonField: "name", rule: "max:80", msg: "MSG02", params: { max: 80 } },
+    { id: "V-04", field: "channelName", jsonField: "name", rule: "regex:^[a-z0-9][a-z0-9-_]*$", msg: "MSG04" },
+    { id: "V-05", field: "description", jsonField: "description", rule: "nullable" },
+    { id: "V-06", field: "description", jsonField: "description", rule: "trim" },
+    { id: "V-07", field: "description", jsonField: "description", rule: "max:300", msg: "MSG02", params: { max: 300 } }
   ],
   "chat.channel.update": [
-    { field: "channelName", rule: "trim" },
-    { field: "channelName", rule: "required", msg: "MSG01" },
-    { field: "channelName", rule: "max:80", msg: "MSG02", params: { max: 80 } },
-    { field: "description", rule: "trim" },
-    { field: "description", rule: "max:300", msg: "MSG02", params: { max: 300 } },
-    { field: "memberUserIds", rule: "array", msg: "MSG04" },
-    { field: "memberAgentIds", rule: "array", msg: "MSG04" }
+    { id: "V-08", field: "channelName", jsonField: "name", rule: "trim" },
+    { id: "V-09", field: "channelName", jsonField: "name", rule: "required", msg: "MSG01" },
+    { id: "V-10", field: "channelName", jsonField: "name", rule: "max:80", msg: "MSG02", params: { max: 80 } },
+    { id: "V-11", field: "channelName", jsonField: "name", rule: "regex:^[a-z0-9][a-z0-9-_]*$", msg: "MSG04" },
+    { id: "V-12", field: "description", jsonField: "description", rule: "nullable" },
+    { id: "V-13", field: "description", jsonField: "description", rule: "trim" },
+    { id: "V-14", field: "description", jsonField: "description", rule: "max:300", msg: "MSG02", params: { max: 300 } },
+    { id: "V-15", field: "memberUserIds", jsonField: "memberUserIds", rule: "nullable" },
+    { id: "V-16", field: "memberUserIds", jsonField: "memberUserIds", rule: "array", msg: "MSG04" },
+    { id: "V-17", field: "memberAgentIds", jsonField: "memberAgentIds", rule: "nullable" },
+    { id: "V-18", field: "memberAgentIds", jsonField: "memberAgentIds", rule: "array", msg: "MSG04" }
   ],
   "chat.thread.create": [
-    { field: "body", rule: "trim" },
-    { field: "body", rule: "required", msg: "MSG01" },
-    { field: "body", rule: "max:20000", msg: "MSG02", params: { max: 20000 } },
-    { field: "title", rule: "nullable" },
-    { field: "title", rule: "trim" },
-    { field: "title", rule: "max:200", msg: "MSG02", params: { max: 200 } }
+    { id: "V-19", field: "body", jsonField: "body", rule: "trim" },
+    { id: "V-20", field: "body", jsonField: "body", rule: "required", msg: "MSG01" },
+    { id: "V-21", field: "body", jsonField: "body", rule: "max:20000", msg: "MSG02", params: { max: 20000 } },
+    { id: "V-22", field: "title", jsonField: "title", rule: "nullable" },
+    { id: "V-23", field: "title", jsonField: "title", rule: "trim" },
+    { id: "V-24", field: "title", jsonField: "title", rule: "max:200", msg: "MSG02", params: { max: 200 } }
   ],
   "chat.message.create": [
-    { field: "body", rule: "trim" },
-    { field: "body", rule: "required", msg: "MSG01" },
-    { field: "body", rule: "max:20000", msg: "MSG02", params: { max: 20000 } }
+    { id: "V-25", field: "body", jsonField: "body", rule: "trim" },
+    { id: "V-26", field: "body", jsonField: "body", rule: "required", msg: "MSG01" },
+    { id: "V-27", field: "body", jsonField: "body", rule: "max:20000", msg: "MSG02", params: { max: 20000 } }
   ],
   "chat.message.react": [
-    { field: "emoji", rule: "required", msg: "MSG01" },
-    { field: "emoji", rule: "in:👍,❤️,🔥,🚀,🎉,👀,✅,🙌", msg: "MSG04" }
+    { id: "V-28", field: "emoji", jsonField: "emoji", rule: "required", msg: "MSG01" },
+    { id: "V-29", field: "emoji", jsonField: "emoji", rule: "in:👍,❤️,🔥,🚀,🎉,👀,✅,🙌", msg: "MSG04" }
   ]
 } as const satisfies Record<string, readonly ValidationRuleItem[]>;
 
@@ -120,4 +143,103 @@ export function resolveMsg(
     }
   }
   return result;
+}
+
+export interface FieldValidationIssue {
+  code: MsgCode;
+  message: string;
+}
+
+export type FieldErrorMap = Record<string, FieldValidationIssue[]>;
+
+export function validateByCatalog(
+  key: ValidationCatalogKey,
+  rawInput: Record<string, unknown>
+): { ok: true; normalized: Record<string, unknown> } | { ok: false; fieldErrors: FieldErrorMap } {
+  const rules = collectRules(key);
+  const normalized: Record<string, unknown> = { ...rawInput };
+  const fieldErrors: FieldErrorMap = {};
+  const nullableFields = new Set<string>();
+
+  for (const item of rules) {
+    if (item.rule === "nullable") {
+      nullableFields.add(item.jsonField);
+    }
+  }
+
+  for (const item of rules) {
+    const target = item.jsonField;
+    if ((fieldErrors[target]?.length ?? 0) > 0) {
+      continue;
+    }
+
+    const current = normalized[target];
+
+    if (item.rule === "nullable") {
+      continue;
+    }
+
+    if (item.rule === "trim") {
+      if (typeof current === "string") {
+        normalized[target] = current.trim();
+      }
+      continue;
+    }
+
+    if ((current === undefined || current === null) && nullableFields.has(target)) {
+      continue;
+    }
+
+    if (item.rule === "required") {
+      const missing =
+        current === undefined ||
+        current === null ||
+        (typeof current === "string" && current.length === 0);
+      if (missing && item.msg) {
+        fieldErrors[target] = [{ code: item.msg, message: resolveMsg(item.msg, item.field, item.params) }];
+      }
+      continue;
+    }
+
+    if (item.rule === "array") {
+      if (!Array.isArray(current) && item.msg) {
+        fieldErrors[target] = [{ code: item.msg, message: resolveMsg(item.msg, item.field, item.params) }];
+      }
+      continue;
+    }
+
+    if (item.rule.startsWith("max:")) {
+      const maxLen = Number(item.rule.slice(4));
+      if (typeof current !== "string") {
+        if (item.msg) {
+          fieldErrors[target] = [{ code: "MSG04", message: resolveMsg("MSG04", item.field) }];
+        }
+      } else if (current.length > maxLen && item.msg) {
+        fieldErrors[target] = [
+          { code: item.msg, message: resolveMsg(item.msg, item.field, { max: maxLen }) }
+        ];
+      }
+      continue;
+    }
+
+    if (item.rule.startsWith("regex:")) {
+      const pattern = new RegExp(item.rule.slice(6));
+      if (typeof current === "string" && current.length > 0 && !pattern.test(current) && item.msg) {
+        fieldErrors[target] = [{ code: item.msg, message: resolveMsg(item.msg, item.field, item.params) }];
+      }
+      continue;
+    }
+
+    if (item.rule.startsWith("in:")) {
+      const allowed = item.rule.slice(3).split(",");
+      if ((typeof current !== "string" || !allowed.includes(current)) && item.msg) {
+        fieldErrors[target] = [{ code: item.msg, message: resolveMsg(item.msg, item.field, item.params) }];
+      }
+    }
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { ok: false, fieldErrors };
+  }
+  return { ok: true, normalized };
 }
