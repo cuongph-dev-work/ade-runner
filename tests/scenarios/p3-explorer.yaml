@@ -1,0 +1,24 @@
+agent: "@exploder"
+steps:
+  - mcp:
+      tool: "post_message"
+      args:
+        text: "Kết quả truy vết logic cấp phát quyền grant và token MCP"
+        kind: "explorer_card"
+        explorer:
+          topic: "Luồng xác thực Token MCP và Grant Check"
+          flow_steps:
+            - "1. Client runner đính kèm Header Authorization Bearer mcp_..."
+            - "2. McpServer giải mã token tìm agentId, threadId và scopes"
+            - "3. McpServer đối chiếu bảng thread_agents kiểm tra active grant"
+          trace_steps:
+            - "apps/hub/src/mcp/mcp-server.ts: handleCall"
+            - "apps/hub/src/trigger/grant-service.ts: hasActiveGrant"
+          citations:
+            - file: "apps/hub/src/mcp/mcp-server.ts"
+              start_line: 45
+              end_line: 55
+              role: "declaration"
+              snippet: "const grant = grantService.hasActiveGrant(agentId, threadId);"
+              note: "Kiểm tra quyền grant trước khi thực thi tool get_thread"
+  - wait_ms: 100

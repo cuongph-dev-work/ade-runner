@@ -103,6 +103,10 @@ export class RunDispatcher {
     });
   }
 
+  setMcpUrl(url: string | null): void {
+    (this.deps as { mcpUrl: string | null }).mcpUrl = url;
+  }
+
   onAgentMentioned(params: {
     projectId: string;
     threadId: string;

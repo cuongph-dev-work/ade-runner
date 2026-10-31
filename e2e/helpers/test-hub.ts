@@ -15,6 +15,7 @@ const webDistDir = resolve(import.meta.dirname, "../../apps/web/dist");
 
 export interface StartTestHubOptions {
   scenarioMap?: Record<string, string>;
+  workflowYaml?: string;
   agents?: Array<{
     handle: string;
     harness: HarnessType;
@@ -49,9 +50,27 @@ export async function startTestHub(options?: StartTestHubOptions): Promise<TestH
     join(repoDir, ".ade", "project.yaml"),
     `name: "ADE E2E Test"\ndefault_branch: "main"\nworkflow: "feature"\n`
   );
+  const defaultWorkflowContent = `id: "feature"
+initial: "open"
+states:
+  - open
+  - planning
+  - plan_review
+  - building
+  - review
+  - done
+rules:
+  - id: "r_outcome"
+    on: "run.outcome_reported"
+    when:
+      status: "done"
+    do:
+      - set_state: "plan_review"
+`;
+
   writeFileSync(
     join(repoDir, ".ade", "workflows", "feature.yaml"),
-    `id: "feature"\ninitial: "open"\nstates:\n  - open\n  - planning\n  - done\n`
+    options?.workflowYaml ?? defaultWorkflowContent
   );
 
   const resolvedScenarioMap: Record<string, string> = { ...(options?.scenarioMap ?? {}) };
@@ -119,6 +138,9 @@ export async function startTestHub(options?: StartTestHubOptions): Promise<TestH
   if (!address || typeof address === "string") {
     throw new Error("Failed to bind port");
   }
+
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  bundle.runDispatcher.setMcpUrl(`${baseUrl}/mcp`);
 
   daemon.connect();
 

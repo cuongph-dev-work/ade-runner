@@ -13,9 +13,12 @@ import {
   type WorkflowYaml
 } from "@ade/shared";
 
-const BUILTIN_FEATURE_WORKFLOW: WorkflowYaml = {
+export const BUILTIN_FEATURE_WORKFLOW: WorkflowYaml = {
   id: "feature",
+  workflow: "feature",
   initial: "open",
+  main_agent: undefined,
+  max_parallel_workers: 3,
   states: [
     "open",
     "planning",
@@ -24,6 +27,7 @@ const BUILTIN_FEATURE_WORKFLOW: WorkflowYaml = {
     { review: { gate: "review" } },
     "done"
   ],
+  agents: undefined,
   rules: []
 };
 

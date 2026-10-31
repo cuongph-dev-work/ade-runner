@@ -111,6 +111,20 @@ CREATE TABLE IF NOT EXISTS threads (
 CREATE INDEX IF NOT EXISTS idx_threads_channel_created
 ON threads(channel_id, created_at);
 
+CREATE TABLE IF NOT EXISTS thread_agents (
+  thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('main', 'worker')),
+  scope TEXT NOT NULL CHECK (scope IN ('brief', 'full')),
+  granted_by TEXT NOT NULL,
+  granted_at TEXT NOT NULL,
+  revoked_at TEXT,
+  PRIMARY KEY (thread_id, agent_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_thread_agents_active
+  ON thread_agents(thread_id, agent_id);
+
 CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY NOT NULL,
   thread_id TEXT NOT NULL REFERENCES threads(id),

@@ -1,6 +1,7 @@
 export * from "./driver.js";
 export * from "./fake/scenario-loader.js";
 export * from "./fake/fake-claude-driver.js";
+export * from "./fake/mcp-caller.js";
 export * from "./fake/acp-stdio-client.js";
 export * from "./isolation.js";
 export * from "./worktree.js";

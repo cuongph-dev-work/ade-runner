@@ -1,0 +1,17 @@
+agent: "@lead"
+steps:
+  - mcp:
+      tool: "get_thread"
+      args: {}
+  - wait_ms: 100
+  - mcp:
+      tool: "post_progress"
+      args:
+        percent: 50
+        text: "Đang lập kế hoạch v2"
+  - wait_ms: 100
+  - mcp:
+      tool: "report_outcome"
+      args:
+        status: "done"
+        summary: "Đã hoàn thành lập kế hoạch"

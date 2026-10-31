@@ -133,6 +133,24 @@ export const VALIDATION_CATALOG = {
     { id: "V-04", field: "optionId", jsonField: "optionId", rule: "max:64", msg: "MSG02", params: { max: 64 } },
     { id: "V-05", field: "decision", jsonField: "decision", rule: "required", msg: "MSG01" },
     { id: "V-06", field: "decision", jsonField: "decision", rule: "in:allow,deny", msg: "MSG04" }
+  ],
+  "trigger.question.reply": [
+    { id: "V-TR-01", field: "answer", jsonField: "answer", rule: "trim" },
+    { id: "V-TR-02", field: "answer", jsonField: "answer", rule: "max:2000", msg: "MSG02", params: { max: 2000 } },
+    { id: "V-TR-03", field: "optionId", jsonField: "optionId", rule: "nullable" },
+    { id: "V-TR-04", field: "optionId", jsonField: "optionId", rule: "max:100", msg: "MSG02", params: { max: 100 } }
+  ],
+  "trigger.mcp.reportOutcome": [
+    { id: "V-TR-05", field: "status", jsonField: "status", rule: "required", msg: "MSG01" },
+    { id: "V-TR-06", field: "status", jsonField: "status", rule: "in:done,blocked,needs_revision", msg: "MSG04" },
+    { id: "V-TR-07", field: "summary", jsonField: "summary", rule: "trim" },
+    { id: "V-TR-08", field: "summary", jsonField: "summary", rule: "required", msg: "MSG01" },
+    { id: "V-TR-09", field: "summary", jsonField: "summary", rule: "max:4000", msg: "MSG02", params: { max: 4000 } }
+  ],
+  "trigger.mcp.postProgress": [
+    { id: "V-TR-10", field: "text", jsonField: "text", rule: "trim" },
+    { id: "V-TR-11", field: "text", jsonField: "text", rule: "required", msg: "MSG01" },
+    { id: "V-TR-12", field: "text", jsonField: "text", rule: "max:1000", msg: "MSG02", params: { max: 1000 } }
   ]
 } as const satisfies Record<string, readonly ValidationRuleItem[]>;
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createInterface } from "node:readline";
 import { loadScenarioFromFile } from "./scenario-loader.js";
+import { invokeAdeMcpTool } from "./mcp-caller.js";
 
 interface JsonRpcMessage {
   jsonrpc: "2.0";
@@ -32,6 +33,8 @@ async function main(): Promise<void> {
 
   let nextServerReqId = 1000;
   let activeSessionId = "ses_fake_default";
+  let activeMcpUrl = "";
+  let activeMcpToken = "";
   const pendingClientResponses = new Map<
     number | string,
     (result: Record<string, unknown>) => void
@@ -136,6 +139,18 @@ async function main(): Promise<void> {
             }
           }
         });
+        if (activeMcpUrl && activeMcpToken) {
+          try {
+            await invokeAdeMcpTool({
+              mcpUrl: activeMcpUrl,
+              mcpToken: activeMcpToken,
+              tool: step.mcp.tool,
+              args: (step.mcp.args as Record<string, unknown>) ?? {}
+            });
+          } catch (err) {
+            console.warn(`[ade-fake-agent] invokeAdeMcpTool error:`, err);
+          }
+        }
       }
     }
 
@@ -173,6 +188,18 @@ async function main(): Promise<void> {
       });
     } else if (msg.method === "session/new" && msg.id !== undefined) {
       activeSessionId = `ses_fake_${Date.now()}`;
+      const mcpServers = ((msg.params as Record<string, unknown>)?.mcpServers as Array<{
+        url?: string;
+        headers?: Array<{ name: string; value: string }>;
+      }>) ?? [];
+      const adeMcp = mcpServers.find((s) => s.url);
+      if (adeMcp?.url) {
+        activeMcpUrl = adeMcp.url;
+        const authHeader = adeMcp.headers?.find((h) => h.name.toLowerCase() === "authorization")?.value;
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          activeMcpToken = authHeader.slice("Bearer ".length);
+        }
+      }
       sendJsonRpc({
         jsonrpc: "2.0",
         id: msg.id,

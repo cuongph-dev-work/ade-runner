@@ -6,6 +6,7 @@ import YAML from "yaml";
 import type { PermissionReplyMessage, RunStartMessage } from "@ade/shared";
 import type { DriverCallbacks, HarnessDriver } from "./types.js";
 import type { IsolationProfileManager } from "../isolation.js";
+import { invokeAdeMcpTool } from "../fake/mcp-caller.js";
 
 interface PendingPermission {
   resolve: (reply: PermissionReplyMessage) => void;
@@ -356,6 +357,30 @@ export class FakeClaudeDriver implements HarnessDriver {
         }
       } else if (typeof step.wait_ms === "number") {
         await new Promise((r) => setTimeout(r, step.wait_ms as number));
+      } else if (step.mcp && typeof step.mcp === "object") {
+        const mcpStep = step.mcp as { tool: string; args?: Record<string, unknown> };
+        callCounter += 1;
+        callbacks.onEvent(msg.runId, sessionId, {
+          kind: "tool_call",
+          data: {
+            callId: `mcp_${callCounter}`,
+            tool: mcpStep.tool,
+            summary: `MCP ${mcpStep.tool} ✓`,
+            status: "completed"
+          }
+        });
+        if (msg.mcpUrl && msg.mcpToken) {
+          try {
+            await invokeAdeMcpTool({
+              mcpUrl: msg.mcpUrl,
+              mcpToken: msg.mcpToken,
+              tool: mcpStep.tool,
+              args: mcpStep.args ?? {}
+            });
+          } catch (err) {
+            console.warn(`[FakeClaudeDriver] invokeAdeMcpTool ${mcpStep.tool} error:`, err);
+          }
+        }
       }
     }
 

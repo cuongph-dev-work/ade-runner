@@ -13,6 +13,7 @@ import {
   ThreadListResponseSchema,
   ThreadRunsResponseSchema,
   ToggleReactionResponseSchema,
+  ReplyQuestionResponseSchema,
   type AgentListResponse,
   type CancelRunResponse,
   type Channel,
@@ -26,7 +27,9 @@ import {
   type ReactionEmoji,
   type RunSummary,
   type Thread,
-  type ToggleReactionResponse
+  type ToggleReactionResponse,
+  type ReplyQuestionResponse,
+  type QuestionAnswerItem
 } from "@ade/shared";
 import { ApiRequestError } from "./health.js";
 
@@ -231,5 +234,26 @@ export async function cancelRunApi(runId: string): Promise<CancelRunResponse> {
     `/api/runs/${runId}/cancel`,
     { method: "POST" },
     (d) => CancelRunResponseSchema.parse(d)
+  );
+}
+
+export async function replyQuestionApi(params: {
+  threadId: string;
+  questionId: string;
+  answer?: string;
+  optionId?: string | null;
+  answers?: QuestionAnswerItem[];
+}): Promise<ReplyQuestionResponse> {
+  return requestJson(
+    `/api/threads/${params.threadId}/questions/${params.questionId}/reply`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        answer: params.answer,
+        optionId: params.optionId,
+        answers: params.answers,
+      }),
+    },
+    (d) => ReplyQuestionResponseSchema.parse(d)
   );
 }

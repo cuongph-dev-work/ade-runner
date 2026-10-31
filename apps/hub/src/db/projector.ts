@@ -271,6 +271,133 @@ export function applyEventToProjection(
     case "agent.mentioned":
       break;
 
+    case "agent.granted": {
+      sqlite
+        .prepare(
+          `INSERT INTO thread_agents (thread_id, agent_id, role, scope, granted_by, granted_at, revoked_at)
+           VALUES (?, ?, ?, ?, ?, ?, NULL)
+           ON CONFLICT(thread_id, agent_id) DO UPDATE SET
+             role = excluded.role,
+             scope = excluded.scope,
+             granted_by = excluded.granted_by,
+             granted_at = excluded.granted_at,
+             revoked_at = NULL`
+        )
+        .run(
+          event.thread_id,
+          event.payload.agent_id,
+          event.payload.role ?? "worker",
+          event.payload.scope ?? "full",
+          event.payload.granted_by ?? event.actor.id,
+          event.ts
+        );
+      break;
+    }
+
+    case "agent.revoked": {
+      sqlite
+        .prepare(
+          `UPDATE thread_agents SET revoked_at = ? WHERE thread_id = ? AND agent_id = ?`
+        )
+        .run(event.ts, event.thread_id, event.payload.agent_id);
+      break;
+    }
+
+    case "thread.state_changed": {
+      sqlite
+        .prepare(
+          `UPDATE threads SET previous_state = ?, state = ?, updated_at = ? WHERE id = ?`
+        )
+        .run(event.payload.from, event.payload.to, event.ts, event.thread_id);
+      break;
+    }
+
+    case "engine.halted": {
+      sqlite
+        .prepare(
+          `UPDATE threads SET engine_halted = 1, updated_at = ? WHERE id = ?`
+        )
+        .run(event.ts, event.thread_id);
+      break;
+    }
+
+    case "run.outcome_reported": {
+      sqlite
+        .prepare(
+          `UPDATE runs SET outcome = ?, summary = ?, decisions_json = ? WHERE id = ?`
+        )
+        .run(
+          event.payload.status,
+          event.payload.summary,
+          JSON.stringify(event.payload.decisions ?? []),
+          event.payload.run_id
+        );
+      break;
+    }
+
+    case "question.asked": {
+      const cardMsgId = String(event.payload.card_message_id ?? event.payload.question_id);
+      sqlite
+        .prepare(
+          `INSERT INTO messages (id, thread_id, is_root, author_type, author_id, kind, body, mentions_json, human_mentions_json, reactions_json, card_json, run_id, created_at, updated_at)
+           VALUES (?, ?, 0, 'agent', ?, 'question_card', ?, '[]', '[]', '[]', ?, ?, ?, ?)`
+        )
+        .run(
+          cardMsgId,
+          event.thread_id,
+          event.actor.id,
+          String(event.payload.question ?? ""),
+          JSON.stringify(event.payload),
+          event.payload.run_id ?? null,
+          event.ts,
+          event.ts
+        );
+      break;
+    }
+
+    case "question.answered": {
+      const cardMsgId = String(event.payload.card_message_id ?? event.payload.question_id);
+      const row = sqlite
+        .prepare("SELECT card_json FROM messages WHERE id = ?")
+        .get(cardMsgId) as { card_json: string } | undefined;
+      if (row?.card_json) {
+        try {
+          const card = JSON.parse(row.card_json) as Record<string, unknown>;
+          card.status = "answered";
+          card.answer = event.payload.answer;
+          card.selected_option_id = event.payload.option_id;
+          card.answers = event.payload.answers;
+          card.answered_by = event.payload.answered_by;
+          card.answered_at = event.ts;
+          sqlite
+            .prepare("UPDATE messages SET card_json = ?, updated_at = ? WHERE id = ?")
+            .run(JSON.stringify(card), event.ts, cardMsgId);
+        } catch {
+          // ignore
+        }
+      }
+      break;
+    }
+
+    case "question.timed_out": {
+      const qId = String(event.payload.question_id);
+      const row = sqlite
+        .prepare("SELECT id, card_json FROM messages WHERE id = ? OR card_json LIKE ?")
+        .get(qId, `%"question_id":"${qId}"%`) as { id: string; card_json: string } | undefined;
+      if (row?.card_json) {
+        try {
+          const card = JSON.parse(row.card_json) as Record<string, unknown>;
+          card.status = "expired";
+          sqlite
+            .prepare("UPDATE messages SET card_json = ?, updated_at = ? WHERE id = ?")
+            .run(JSON.stringify(card), event.ts, row.id);
+        } catch {
+          // ignore
+        }
+      }
+      break;
+    }
+
     case "runner.connected":
     case "runner.disconnected":
     case "run.queued":

@@ -172,3 +172,13 @@ export const runLogsTable = sqliteTable("run_logs", {
   dataJson: text("data_json").notNull(),
   ts: text("ts").notNull()
 });
+
+export const threadAgentsTable = sqliteTable("thread_agents", {
+  threadId: text("thread_id").notNull(),
+  agentId: text("agent_id").notNull(),
+  role: text("role").notNull(),
+  scope: text("scope").notNull(),
+  grantedBy: text("granted_by").notNull(),
+  grantedAt: text("granted_at").notNull(),
+  revokedAt: text("revoked_at")
+});

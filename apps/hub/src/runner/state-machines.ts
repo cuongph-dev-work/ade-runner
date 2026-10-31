@@ -18,7 +18,7 @@ const ALLOWED_RUN_TRANSITIONS: Record<RunStatus, ReadonlySet<RunStatus>> = {
   queued: new Set(["running", "cancelled"]),
   running: new Set(["waiting_permission", "waiting_human", "completed", "failed", "cancelled"]),
   waiting_permission: new Set(["running", "cancelled"]),
-  waiting_human: new Set(["running", "cancelled"]),
+  waiting_human: new Set(["running", "cancelled", "completed"]),
   completed: new Set([]),
   failed: new Set([]),
   cancelled: new Set([]),

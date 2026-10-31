@@ -1,0 +1,10 @@
+agent: "@clarifier"
+steps:
+  - mcp:
+      tool: "ask_human"
+      args:
+        question: "Bạn chọn cơ sở dữ liệu nào cho ADE Hub?"
+        options:
+          - "SQLite local"
+          - "PostgreSQL"
+  - wait_ms: 100

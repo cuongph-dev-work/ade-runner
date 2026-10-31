@@ -130,5 +130,59 @@ export const AgentMentionedPayloadSchema = z.object({
   text: z.string()
 });
 
+export const AgentGrantedPayloadSchema = z.object({
+  agent_id: z.string().min(1),
+  role: z.enum(["main", "worker"]),
+  scope: z.enum(["brief", "full"]),
+  granted_by: z.string().min(1)
+});
+
+export const AgentRevokedPayloadSchema = z.object({
+  agent_id: z.string().min(1)
+});
+
+export const ThreadStateChangedPayloadSchema = z.object({
+  from: z.string().min(1),
+  to: z.string().min(1),
+  reason: z.string().optional()
+});
+
+export const EngineHaltedPayloadSchema = z.object({
+  reason: z.string().min(1),
+  causation_depth: z.number().int().optional()
+});
+
+export const QuestionAskedPayloadSchema = z.object({
+  question_id: z.string().min(1),
+  run_id: z.string().nullable(),
+  question: z.string().min(1),
+  options: z.array(z.string()).default([]),
+  questions: z.array(z.record(z.string(), z.unknown())).default([]),
+  timeout_s: z.number().int().min(1).optional(),
+  card_message_id: z.string().min(1)
+});
+
+export const QuestionAnsweredPayloadSchema = z.object({
+  question_id: z.string().min(1),
+  run_id: z.string().nullable(),
+  answer: z.string().min(1),
+  option_id: z.string().nullable(),
+  answers: z.array(z.record(z.string(), z.unknown())).default([]),
+  answered_by: z.string().min(1)
+});
+
+export const QuestionTimedOutPayloadSchema = z.object({
+  question_id: z.string().min(1),
+  run_id: z.string().nullable(),
+  timed_out_at: z.string().datetime()
+});
+
+export const RunOutcomeReportedPayloadSchema = z.object({
+  run_id: z.string().min(1),
+  status: z.enum(["done", "blocked", "needs_revision"]),
+  summary: z.string().min(1),
+  decisions: z.array(z.string()).default([])
+});
+
 export const AdeEventSchema = EventEnvelopeSchema;
 export type AdeEvent = z.infer<typeof AdeEventSchema>;

@@ -96,11 +96,15 @@ export const AgentYamlSchema = z
   });
 export type AgentYaml = z.infer<typeof AgentYamlSchema>;
 
+export const GateKindSchema = z.enum(["plan", "spec", "review"]);
+export type GateKind = z.infer<typeof GateKindSchema>;
+
 export const WorkflowStateMetaSchema = z
   .object({
-    gate: z.enum(["plan", "spec", "review"]).optional()
+    gate: GateKindSchema.optional()
   })
   .passthrough();
+export const WorkflowStateConfigSchema = WorkflowStateMetaSchema;
 
 export const WorkflowStateItemSchema = z.union([
   z.string().trim().min(1),
@@ -116,21 +120,119 @@ export const WorkflowStatesSchema = z.union([
     })
 ]);
 
+export const WorkflowConditionPrimitiveSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean()
+]);
+
+export const WorkflowConditionValueSchema = z.union([
+  WorkflowConditionPrimitiveSchema,
+  z.array(WorkflowConditionPrimitiveSchema).min(1),
+  z.object({ matches: z.string().min(1) })
+]);
+export type WorkflowConditionValue = z.infer<typeof WorkflowConditionValueSchema>;
+
+export const WorkflowActionSchema = z.union([
+  z.object({
+    dispatch: z.object({
+      agent: z.string().min(1),
+      skill: z.string().min(1).optional(),
+      prompt: z.string().optional()
+    })
+  }),
+  z.object({
+    set_state: z.union([
+      z.string().min(1),
+      z.object({
+        to: z.string().min(1),
+        reason: z.string().optional()
+      })
+    ])
+  }),
+  z.object({
+    post_message: z.object({
+      text: z.string().min(1),
+      kind: z.enum(["text", "system"]).optional()
+    })
+  }),
+  z.object({
+    ask_human: z.object({
+      text: z.string().min(1),
+      options: z.array(z.string().min(1)).optional()
+    })
+  }),
+  z.object({
+    deny_tool: z.object({
+      reason: z.string().min(1)
+    })
+  }),
+  z.object({
+    run_script: z.object({
+      command: z.string().min(1),
+      timeout_s: z.number().int().min(1).max(120).optional()
+    })
+  })
+]);
+export type WorkflowAction = z.infer<typeof WorkflowActionSchema>;
+
+export const WorkflowRuleSchema = z.object({
+  on: z.string().min(1),
+  when: z.record(z.string(), WorkflowConditionValueSchema).optional(),
+  do: z.array(WorkflowActionSchema).min(1)
+});
+export type WorkflowRule = z.infer<typeof WorkflowRuleSchema>;
+
 export const WorkflowYamlSchema = z
   .object({
     id: z.string().trim().min(1).optional(),
     workflow: z.string().trim().min(1).optional(),
     initial: z.string().trim().min(1),
+    main_agent: z.string().min(1).optional(),
+    max_parallel_workers: z.number().int().min(1).max(10).default(3),
     states: WorkflowStatesSchema,
-    rules: z.array(z.record(z.string(), z.unknown())).default([])
+    agents: z
+      .record(
+        z.string(),
+        z.object({
+          harness: z.string().optional(),
+          skills: z.array(z.string()).optional(),
+          write: z.boolean().optional()
+        })
+      )
+      .optional(),
+    rules: z.array(z.union([WorkflowRuleSchema, z.record(z.string(), z.unknown())])).default([])
   })
   .transform((val) => ({
     id: val.id ?? val.workflow,
+    workflow: val.workflow ?? val.id,
     initial: val.initial,
+    main_agent: val.main_agent,
+    max_parallel_workers: val.max_parallel_workers,
     states: val.states,
+    agents: val.agents,
     rules: val.rules
   }));
 export type WorkflowYaml = z.infer<typeof WorkflowYamlSchema>;
+
+export function normalizeWorkflowStates(
+  states: WorkflowYaml["states"]
+): Record<string, { gate?: GateKind }> {
+  if (Array.isArray(states)) {
+    const res: Record<string, { gate?: GateKind }> = {};
+    for (const item of states) {
+      if (typeof item === "string") {
+        res[item] = {};
+      } else {
+        for (const [k, v] of Object.entries(item)) {
+          res[k] = v;
+        }
+      }
+    }
+    return res;
+  }
+  return states as Record<string, { gate?: GateKind }>;
+}
 
 export function extractWorkflowStateNames(workflow: WorkflowYaml): string[] {
   const names: string[] = [];

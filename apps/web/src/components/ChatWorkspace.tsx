@@ -7,7 +7,9 @@ import {
   type Message,
   type PermissionCardPayload,
   type ProjectSummary,
-  type ReactionEmoji
+  type ReactionEmoji,
+  type QuestionCardPayload,
+  type ExplorerCardPayload
 } from "@ade/shared";
 import {
   ChatApiError,
@@ -23,6 +25,7 @@ import {
   fetchThreadRuns,
   postThreadReply,
   replyPermissionApi,
+  replyQuestionApi,
   toggleMessageReaction,
   updateChannelApi
 } from "../api/chat.js";
@@ -37,6 +40,8 @@ import { MentionComposer } from "./MentionComposer.js";
 import { MessageBody } from "./MessageBody.js";
 import { LiveCard } from "./cards/LiveCard.js";
 import { PermissionCard } from "./cards/PermissionCard.js";
+import { QuestionCard } from "./cards/QuestionCard.js";
+import { ExplorerCard } from "./cards/ExplorerCard.js";
 import {
   computeThreadRunSummary,
   isAgentRunning,
@@ -339,6 +344,36 @@ export function ChatWorkspace({
               void queryClient.invalidateQueries({ queryKey: ["messages", options.threadId] });
             }}
           />
+        </div>
+      );
+    }
+
+    if (msg.kind === "question_card" && msg.card) {
+      const cardPayload = typeof msg.card === "string" ? JSON.parse(msg.card) : msg.card;
+      return (
+        <div key={msg.id} className="my-2">
+          <QuestionCard
+            card={cardPayload as QuestionCardPayload}
+            onReplyQuestion={async (reply) => {
+              await replyQuestionApi({
+                threadId: options.threadId,
+                questionId: reply.questionId,
+                answer: reply.answer,
+                optionId: reply.optionId,
+                answers: reply.answers,
+              });
+              void queryClient.invalidateQueries({ queryKey: ["messages", options.threadId] });
+            }}
+          />
+        </div>
+      );
+    }
+
+    if (msg.kind === "explorer_card" && msg.card) {
+      const cardPayload = typeof msg.card === "string" ? JSON.parse(msg.card) : msg.card;
+      return (
+        <div key={msg.id} className="my-2">
+          <ExplorerCard card={cardPayload as ExplorerCardPayload} />
         </div>
       );
     }
