@@ -79,9 +79,10 @@ rules:
     for (const ag of options.agents) {
       const handleClean = ag.handle.startsWith("@") ? ag.handle.slice(1) : ag.handle;
       const cred = ag.harness === "codex" ? "sub-chatgpt" : "sub-claude";
+      const isLead = handleClean === "lead";
       writeFileSync(
         join(repoDir, ".ade", "agents", `${handleClean}.yaml`),
-        `handle: "@${handleClean}"\ndisplay_name: "${handleClean}"\nharness: "${ag.harness}"\ncredential_profile: "${cred}"\nwrite: ${ag.write ? "true" : "false"}\n`
+        `handle: "@${handleClean}"\ndisplay_name: "${handleClean}"\nrole: "${isLead ? "main" : "worker"}"\ncan_be_main: ${isLead ? "true" : "false"}\nharness: "${ag.harness}"\ncredential_profile: "${cred}"\nwrite: ${ag.write ? "true" : "false"}\n`
       );
       if (ag.scenario) {
         resolvedScenarioMap[`@${handleClean}`] = ag.scenario;

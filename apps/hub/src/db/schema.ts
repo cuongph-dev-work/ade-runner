@@ -182,3 +182,32 @@ export const threadAgentsTable = sqliteTable("thread_agents", {
   grantedAt: text("granted_at").notNull(),
   revokedAt: text("revoked_at")
 });
+
+export const approvalsTable = sqliteTable("approvals", {
+  id: text("id").primaryKey(),
+  threadId: text("thread_id").notNull(),
+  runId: text("run_id").notNull(),
+  gate: text("gate").notNull(),
+  version: integer("version").notNull().default(1),
+  status: text("status").notNull().default("pending"),
+  targetState: text("target_state").notNull(),
+  summary: text("summary").notNull(),
+  decidedBy: text("decided_by"),
+  decidedAt: text("decided_at"),
+  feedback: text("feedback"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull()
+});
+
+export const agentScratchpadsTable = sqliteTable(
+  "agent_scratchpads",
+  {
+    threadId: text("thread_id").notNull(),
+    agentId: text("agent_id").notNull(),
+    content: text("content").notNull().default(""),
+    updatedAt: text("updated_at").notNull()
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.threadId, t.agentId] })
+  })
+);

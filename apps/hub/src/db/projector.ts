@@ -398,6 +398,106 @@ export function applyEventToProjection(
       break;
     }
 
+    case "approval.requested": {
+      const p = event.payload;
+      const approvalId = String(p.approval_id);
+      const cardMsgId = String(p.card_message_id ?? `msg_${approvalId}`);
+      sqlite
+        .prepare(
+          `INSERT INTO approvals (id, thread_id, run_id, gate, version, status, target_state, summary, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`
+        )
+        .run(
+          approvalId,
+          event.thread_id,
+          String(p.run_id ?? event.run_id ?? ""),
+          String(p.gate),
+          Number(p.version ?? 1),
+          String(p.target_state ?? ""),
+          String(p.summary ?? ""),
+          event.ts,
+          event.ts
+        );
+
+      sqlite
+        .prepare(
+          `INSERT INTO messages (id, thread_id, is_root, author_type, author_id, kind, body, mentions_json, human_mentions_json, reactions_json, card_json, run_id, created_at, updated_at)
+           VALUES (?, ?, 0, 'agent', ?, 'approval_card', ?, '[]', '[]', '[]', ?, ?, ?, ?)`
+        )
+        .run(
+          cardMsgId,
+          event.thread_id,
+          event.actor.id,
+          String(p.summary ?? ""),
+          JSON.stringify({
+            approval_id: approvalId,
+            gate: p.gate,
+            version: p.version,
+            title: p.title ?? `Cổng duyệt ${p.gate} v${p.version}`,
+            summary: p.summary,
+            status: "pending",
+            requested_by_agent: event.actor.id,
+            target_state: p.target_state,
+          }),
+          event.run_id ?? null,
+          event.ts,
+          event.ts
+        );
+      break;
+    }
+
+    case "approval.resolved": {
+      const p = event.payload;
+      const approvalId = String(p.approval_id);
+      const status = String(p.status);
+      sqlite
+        .prepare(
+          `UPDATE approvals
+           SET status = ?, decided_by = ?, decided_at = ?, feedback = ?, updated_at = ?
+           WHERE id = ?`
+        )
+        .run(status, p.decided_by ? String(p.decided_by) : null, event.ts, p.feedback ? String(p.feedback) : null, event.ts, approvalId);
+
+      const row = sqlite
+        .prepare("SELECT id, card_json FROM messages WHERE card_json LIKE ?")
+        .get(`%"approval_id":"${approvalId}"%`) as { id: string; card_json: string } | undefined;
+      if (row?.card_json) {
+        try {
+          const card = JSON.parse(row.card_json);
+          card.status = status;
+          card.decided_by = p.decided_by;
+          card.decided_at = event.ts;
+          card.feedback = p.feedback;
+          sqlite
+            .prepare("UPDATE messages SET card_json = ?, updated_at = ? WHERE id = ?")
+            .run(JSON.stringify(card), event.ts, row.id);
+        } catch {}
+      }
+      break;
+    }
+
+    case "scratchpad.updated": {
+      const p = event.payload;
+      sqlite
+        .prepare(
+          `INSERT INTO agent_scratchpads (thread_id, agent_id, content, updated_at)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(thread_id, agent_id) DO UPDATE SET
+             content = excluded.content,
+             updated_at = excluded.updated_at`
+        )
+        .run(event.thread_id, String(p.agent_id), String(p.content), event.ts);
+      break;
+    }
+
+    case "main.changed": {
+      const p = event.payload;
+      sqlite
+        .prepare("UPDATE threads SET main_agent_id = ?, updated_at = ? WHERE id = ?")
+        .run(String(p.main_agent_id), event.ts, event.thread_id);
+      break;
+    }
+
     case "runner.connected":
     case "runner.disconnected":
     case "run.queued":
@@ -511,8 +611,8 @@ export function projectRunnerEvent(
       .prepare(
         `INSERT INTO runs (
           id, project_id, thread_id, agent_id, invoked_by, credential_profile,
-          role, depth, timeout_s, status, skills_snapshot_json, cost_usd, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, 0, ?)`
+          role, depth, timeout_s, task, delegation_id, parent_run_id, status, skills_snapshot_json, cost_usd, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, 0, ?)`
       )
       .run(
         String(evt.payload.run_id),
@@ -524,6 +624,9 @@ export function projectRunnerEvent(
         String(evt.payload.role ?? "worker"),
         Number(evt.payload.depth ?? 0),
         Number(evt.payload.timeout_s ?? 600),
+        evt.payload.task ? String(evt.payload.task) : null,
+        evt.payload.delegation_id ? String(evt.payload.delegation_id) : null,
+        evt.payload.parent_run_id ? String(evt.payload.parent_run_id) : null,
         JSON.stringify(evt.payload.skills_snapshot ?? []),
         evt.ts
       );

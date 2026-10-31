@@ -38,6 +38,7 @@ const RUN_SUMMARY_SELECT_SQL = `
 
 export class RunDispatcher {
   private readonly aggregator: ProgressAggregator;
+  public onDelegationCheck?: (delegationId: string) => void;
 
   constructor(
     private readonly deps: {
@@ -113,6 +114,10 @@ export class RunDispatcher {
     agentId: string;
     invokedBy: string;
     promptText: string;
+    role?: "main" | "worker";
+    delegationId?: string;
+    parentRunId?: string;
+    task?: string;
   }): string | null {
     const thread = this.getActiveThreadContext(params.threadId);
     if (!thread || Number(thread.engine_halted ?? 0) !== 0) {
@@ -225,12 +230,15 @@ export class RunDispatcher {
       payload: {
         run_id: runId,
         agent_id: params.agentId,
-        role: "worker",
+        role: params.role ?? "worker",
         depth,
         timeout_s: resolvedTimeoutS,
         credential_profile: profile,
         skills_snapshot: skills.map((s) => ({ name: s.name, hash: s.contentHash })),
         prompt: params.promptText,
+        delegation_id: params.delegationId ?? null,
+        parent_run_id: params.parentRunId ?? null,
+        task: params.task ?? null,
       },
     });
 
@@ -278,6 +286,17 @@ export class RunDispatcher {
     const threadCtx = this.getActiveThreadContext(threadId);
     if (!threadCtx) return;
 
+    const activeRunsCount = this.deps.sqlite
+      .prepare(
+        `SELECT COUNT(*) AS cnt
+         FROM runs
+         WHERE thread_id = ? AND status IN ('running', 'waiting_permission', 'waiting_human')`
+      )
+      .get(threadId) as { cnt: number };
+
+    let currentActive = activeRunsCount.cnt;
+    if (currentActive >= 3) return;
+
     const writeBusy = this.deps.sqlite
       .prepare(
         `SELECT COUNT(*) AS cnt
@@ -292,6 +311,8 @@ export class RunDispatcher {
 
     let lockTaken = writeBusy.cnt > 0;
     for (const runRow of queuedRuns) {
+      if (currentActive >= 3) break;
+
       const agent = this.deps.sqlite
         .prepare("SELECT * FROM agents WHERE id = ?")
         .get(String(runRow.agent_id)) as Record<string, unknown>;
@@ -425,6 +446,7 @@ export class RunDispatcher {
         mcpToken: this.deps.mcpUrl ? `mcp_${runId}` : null,
         resumeSessionId: null,
       });
+      currentActive++;
     }
   }
 
@@ -814,6 +836,9 @@ export class RunDispatcher {
         this.emitRunUpdated(msg.runId);
       }
       this.tryDispatchQueuedRuns(String(run.thread_id));
+      if (run.delegation_id && this.onDelegationCheck) {
+        this.onDelegationCheck(String(run.delegation_id));
+      }
     }
   }
 

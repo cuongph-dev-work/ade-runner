@@ -257,3 +257,39 @@ export async function replyQuestionApi(params: {
     (d) => ReplyQuestionResponseSchema.parse(d)
   );
 }
+
+export async function resolveApprovalApi(params: {
+  threadId: string;
+  approvalId: string;
+  decision: "approve" | "changes_requested";
+  feedback?: string;
+}): Promise<{ ok: boolean; approval: unknown }> {
+  return requestJson(
+    `/api/threads/${params.threadId}/approvals/${params.approvalId}/decision`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        decision: params.decision,
+        feedback: params.feedback,
+      }),
+    },
+    (d) => d as { ok: boolean; approval: unknown }
+  );
+}
+
+export async function fetchScratchpadsApi(threadId: string): Promise<Array<{
+  threadId: string;
+  agentId: string;
+  agentHandle: string;
+  agentDisplayName: string;
+  agentAvatar?: string | null;
+  content: string;
+  updatedAt: string;
+}>> {
+  const res = await requestJson<{ scratchpads: Array<any> }>(
+    `/api/threads/${threadId}/scratchpads`,
+    { method: "GET" },
+    (d) => d as { scratchpads: Array<any> }
+  );
+  return res.scratchpads ?? [];
+}

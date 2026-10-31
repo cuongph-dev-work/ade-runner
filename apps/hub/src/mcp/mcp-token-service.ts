@@ -5,6 +5,7 @@ export interface McpTokenClaims {
   thread_id: string;
   project_id: string;
   agent_id: string;
+  role?: string;
   iat: number;
   exp: number;
 }
@@ -79,6 +80,7 @@ export class McpTokenService {
         thread_id: runRow.thread_id,
         project_id: runRow.project_id,
         agent_id: runRow.agent_id,
+        role: (runRow as { role?: string }).role ?? "worker",
         iat: nowSeconds,
         exp: nowSeconds + 3600,
       };

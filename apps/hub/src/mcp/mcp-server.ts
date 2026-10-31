@@ -6,18 +6,26 @@ import {
   McpReportOutcomeInputSchema,
   McpPostMessageInputSchema,
   McpAskHumanInputSchema,
+  McpDelegateInputSchema,
+  McpRequestApprovalInputSchema,
+  McpWriteScratchpadInputSchema,
   type ExplorerCardPayload,
   type QuestionCardPayload,
   type EventType,
   type ActorType,
+  type GateKind,
 } from "@ade/shared";
 import type { GrantService } from "../trigger/grant-service.js";
+import type { GateService } from "../orchestration/gate-service.js";
+import type { ThreadScheduler } from "../orchestration/thread-scheduler.js";
 import type { McpTokenClaims } from "./mcp-token-service.js";
 import { HubMcpError } from "./mcp-token-service.js";
 
 export interface McpServerDeps {
   sqlite: Database.Database;
   grantService: GrantService;
+  gateService?: GateService;
+  threadScheduler?: ThreadScheduler;
   appendEvent: (evt: {
     type: EventType;
     projectId: string | null;
@@ -65,6 +73,7 @@ export class McpServer {
                 properties: {
                   include_messages: { type: "integer", default: 20 },
                   thread_id: { type: "string" },
+                  scope: { type: "string", enum: ["brief", "full"], default: "full" },
                 },
               },
             },
@@ -119,6 +128,62 @@ export class McpServer {
                   timeout_s: { type: "integer" },
                 },
                 required: ["question"],
+              },
+            },
+            {
+              name: "delegate",
+              description: "Main Agent giao việc song song cho các worker agents (tối đa 3 worker song song).",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  tasks: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        agent: { type: "string" },
+                        task: { type: "string" },
+                        write: { type: "boolean" },
+                      },
+                      required: ["agent", "task"],
+                    },
+                  },
+                },
+                required: ["tasks"],
+              },
+            },
+            {
+              name: "request_approval",
+              description: "Main Agent tạo cổng duyệt (plan, spec, review) và chờ người dùng phê duyệt.",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  gate: { type: "string", enum: ["plan", "spec", "review"] },
+                  summary: { type: "string" },
+                  target_state: { type: "string" },
+                },
+                required: ["gate", "summary", "target_state"],
+              },
+            },
+            {
+              name: "write_scratchpad",
+              description: "Ghi chép sổ nháp riêng của agent trong thread.",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  content: { type: "string" },
+                },
+                required: ["content"],
+              },
+            },
+            {
+              name: "read_scratchpad",
+              description: "Đọc sổ nháp riêng của agent trong thread (cô lập giữa các agent).",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  agent_id: { type: "string" },
+                },
               },
             },
             {
@@ -220,16 +285,20 @@ export class McpServer {
         throw new HubMcpError(404, "ERR_NOT_FOUND", "Thread not found");
       }
 
+      const scope = (args.scope as string) ?? "full";
       const limit = input.include_messages ?? 20;
-      const msgs = this.deps.sqlite
-        .prepare(
-          `SELECT id, is_root, author_type, author_id, kind, body, created_at
-           FROM messages
-           WHERE thread_id = ?
-           ORDER BY created_at DESC
-           LIMIT ?`
-        )
-        .all(threadId, limit) as Array<{
+
+      let sql = `SELECT id, is_root, author_type, author_id, kind, body, created_at
+                 FROM messages
+                 WHERE thread_id = ?`;
+
+      if (scope === "brief") {
+        sql += ` AND (is_root = 1 OR author_type = 'human' OR kind = 'text')`;
+      }
+
+      sql += ` ORDER BY created_at DESC LIMIT ?`;
+
+      const msgs = this.deps.sqlite.prepare(sql).all(threadId, limit) as Array<{
         id: string;
         is_root: number;
         author_type: string;
@@ -245,7 +314,8 @@ export class McpServer {
         state: thread.state,
         workflow_id: thread.workflow_id,
         summary: thread.summary || null,
-        scope: "full",
+        scope,
+        messages_hidden: scope === "brief",
         messages: msgs.reverse().map((m) => ({
           id: m.id,
           is_root: Boolean(m.is_root),
@@ -304,7 +374,6 @@ export class McpServer {
     if (toolName === "post_message") {
       const input = McpPostMessageInputSchema.parse(args);
       const msgId = `msg_${ulid().toLowerCase()}`;
-      const now = new Date().toISOString();
 
       let cardPayload: ExplorerCardPayload | null = null;
       let msgKind = input.kind === "explorer_card" ? "explorer_card" : "text";
@@ -353,7 +422,6 @@ export class McpServer {
       const input = McpAskHumanInputSchema.parse(args);
       const questionId = `q_${ulid().toLowerCase()}`;
       const msgId = `msg_${ulid().toLowerCase()}`;
-      const now = new Date().toISOString();
 
       const agentRow = this.deps.sqlite
         .prepare("SELECT handle FROM agents WHERE id = ?")
@@ -401,7 +469,101 @@ export class McpServer {
       };
     }
 
+    if (toolName === "delegate") {
+      if (claims.role !== "main") {
+        throw new HubMcpError(
+          403,
+          "ERR_MAIN_REQUIRED",
+          "Chỉ Main Agent mới có quyền gọi tool delegate để giao việc cho worker"
+        );
+      }
+      const input = McpDelegateInputSchema.parse(args);
+      if (!this.deps.threadScheduler) {
+        throw new HubMcpError(500, "ERR_SCHEDULER_UNAVAILABLE", "ThreadScheduler chưa được khởi tạo");
+      }
+      const result = await this.deps.threadScheduler.delegateTasks({
+        threadId,
+        mainRunId: claims.run_id,
+        mainAgentId: claims.agent_id,
+        tasks: input.tasks,
+      });
+      return result;
+    }
+
+    if (toolName === "request_approval") {
+      if (claims.role !== "main") {
+        throw new HubMcpError(
+          403,
+          "ERR_MAIN_REQUIRED",
+          "Chỉ Main Agent mới có quyền gọi tool request_approval"
+        );
+      }
+      const input = McpRequestApprovalInputSchema.parse(args);
+      if (!this.deps.gateService) {
+        throw new HubMcpError(500, "ERR_GATE_SERVICE_UNAVAILABLE", "GateService chưa được khởi tạo");
+      }
+      const result = this.deps.gateService.createApproval({
+        threadId,
+        runId: claims.run_id,
+        gate: input.gate as GateKind,
+        summary: input.summary,
+        targetState: input.target_state,
+        requestedByAgentId: claims.agent_id,
+        projectId: claims.project_id,
+      });
+      if (result.card_message_id) {
+        this.broadcastMessage(result.card_message_id, claims.thread_id, claims.project_id);
+      }
+      return result;
+    }
+
+    if (toolName === "write_scratchpad") {
+      const input = McpWriteScratchpadInputSchema.parse(args);
+      this.deps.appendEvent({
+        type: "scratchpad.updated",
+        projectId: claims.project_id,
+        threadId,
+        runId: claims.run_id,
+        actorType: "agent",
+        actorId: claims.agent_id,
+        payload: {
+          agent_id: claims.agent_id,
+          content: input.content,
+        },
+      });
+      return { ok: true, agent_id: claims.agent_id };
+    }
+
+    if (toolName === "read_scratchpad") {
+      const targetAgentId = typeof args.agent_id === "string" ? args.agent_id : claims.agent_id;
+      if (targetAgentId !== claims.agent_id) {
+        throw new HubMcpError(
+          403,
+          "ERR_SCRATCHPAD_ISOLATED",
+          "Agent không có quyền đọc sổ nháp của agent khác"
+        );
+      }
+
+      const row = this.deps.sqlite
+        .prepare("SELECT content, updated_at FROM agent_scratchpads WHERE thread_id = ? AND agent_id = ?")
+        .get(threadId, claims.agent_id) as { content: string; updated_at: string } | undefined;
+
+      return {
+        agent_id: claims.agent_id,
+        content: row?.content ?? "",
+        updated_at: row?.updated_at ?? null,
+      };
+    }
+
     if (toolName === "set_state") {
+      if (this.deps.gateService?.hasPendingApproval(threadId)) {
+        throw new HubMcpError(
+          403,
+          "ERR_APPROVAL_REQUIRED",
+          "Cổng duyệt đang chờ phê duyệt; không thể chuyển trạng thái thread"
+        );
+      }
+
       throw new HubMcpError(
         403,
         "ERR_SET_STATE_FORBIDDEN",

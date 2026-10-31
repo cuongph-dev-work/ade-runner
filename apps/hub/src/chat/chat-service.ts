@@ -32,6 +32,7 @@ import {
 } from "../config/ade-loader.js";
 import { resolveMentions } from "./mention-parser.js";
 import type { InMemoryEventBus } from "../events/event-bus.js";
+import type { GateService } from "../orchestration/gate-service.js";
 
 export class HubDomainError extends Error {
   constructor(
@@ -50,10 +51,16 @@ interface StoredReactionBucket {
 }
 
 export class ChatService {
+  private gateService?: GateService;
+
   constructor(
     private readonly hubDb: HubDatabase,
     private readonly eventBus: InMemoryEventBus
   ) {}
+
+  setGateService(gateService: GateService): void {
+    this.gateService = gateService;
+  }
 
   registerRepoIfMissing(repoPathInput: string): ProjectSummary | null {
     const repoPath = resolve(repoPathInput);
@@ -931,6 +938,10 @@ export class ChatService {
       updatedThread,
       allMessages
     );
+
+    if (this.gateService && (body.startsWith("/approve") || body.startsWith("/revise") || body.startsWith("/main"))) {
+      void this.gateService.handleSlashCommand(threadId, LOCAL_USER_ID, body);
+    }
 
     return {
       message,

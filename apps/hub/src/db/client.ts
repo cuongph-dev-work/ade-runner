@@ -223,6 +223,33 @@ CREATE TABLE IF NOT EXISTS run_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_run_logs_run_seq ON run_logs(run_id, seq);
+
+CREATE TABLE IF NOT EXISTS approvals (
+  id TEXT PRIMARY KEY NOT NULL,
+  thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  run_id TEXT NOT NULL,
+  gate TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'pending',
+  target_state TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  decided_by TEXT,
+  decided_at TEXT,
+  feedback TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_approvals_thread_status
+  ON approvals(thread_id, status);
+
+CREATE TABLE IF NOT EXISTS agent_scratchpads (
+  thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  content TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (thread_id, agent_id)
+);
 `;
 
 export function openHubDatabase(dbPath: string): HubDatabase {

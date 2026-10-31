@@ -9,7 +9,8 @@ import {
   type ProjectSummary,
   type ReactionEmoji,
   type QuestionCardPayload,
-  type ExplorerCardPayload
+  type ExplorerCardPayload,
+  type ApprovalGateCardPayload
 } from "@ade/shared";
 import {
   ChatApiError,
@@ -26,6 +27,7 @@ import {
   postThreadReply,
   replyPermissionApi,
   replyQuestionApi,
+  resolveApprovalApi,
   toggleMessageReaction,
   updateChannelApi
 } from "../api/chat.js";
@@ -42,6 +44,7 @@ import { LiveCard } from "./cards/LiveCard.js";
 import { PermissionCard } from "./cards/PermissionCard.js";
 import { QuestionCard } from "./cards/QuestionCard.js";
 import { ExplorerCard } from "./cards/ExplorerCard.js";
+import { ApprovalGateCard } from "./cards/ApprovalGateCard.js";
 import {
   computeThreadRunSummary,
   isAgentRunning,
@@ -332,6 +335,25 @@ export function ChatWorkspace({
 
     if (msg.kind === "approval_card" && msg.card) {
       const cardPayload = typeof msg.card === "string" ? JSON.parse(msg.card) : msg.card;
+      if (cardPayload && "gate" in cardPayload) {
+        return (
+          <div key={msg.id} className="my-2">
+            <ApprovalGateCard
+              card={cardPayload as ApprovalGateCardPayload}
+              threadId={options.threadId}
+              onDecision={async (decision) => {
+                await resolveApprovalApi({
+                  threadId: options.threadId,
+                  approvalId: decision.approvalId,
+                  decision: decision.decision,
+                  feedback: decision.feedback,
+                });
+                void queryClient.invalidateQueries({ queryKey: ["messages", options.threadId] });
+              }}
+            />
+          </div>
+        );
+      }
       return (
         <div key={msg.id} className="my-2">
           <PermissionCard
