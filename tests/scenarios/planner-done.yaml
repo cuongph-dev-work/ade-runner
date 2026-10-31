@@ -1,0 +1,7 @@
+agent: "@planner"
+steps:
+  - plan: ["Đọc yêu cầu", "Viết spec"]
+  - tool_call: { name: Write, path: docs/spec.md }
+  - request_permission: { tool: Bash, command: "npm test", expect: allow }
+  - mcp: { tool: post_progress, args: { text: "Đã viết xong spec" } }
+  - mcp: { tool: report_outcome, args: { status: done, summary: "Spec login" } }

@@ -1,0 +1,52 @@
+name: ADE Acceptance Gate
+
+on:
+  push:
+    branches: ["develop", "main", "feat/**", "fix/**", "refactor/**", "chore/**", "docs/**"]
+  pull_request:
+    branches: ["develop", "main"]
+
+jobs:
+  accept:
+    name: Lint, Typecheck & Accept All (Fake Harness Only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ADE_MODE: solo
+      ADE_TEST: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run lint & typecheck gates
+        run: |
+          pnpm lint
+          pnpm typecheck
+
+      - name: Run full acceptance suite
+        run: pnpm accept:all
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

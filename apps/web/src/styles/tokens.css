@@ -1,0 +1,148 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · modes: light (Coral) + dark (Console) · contrast: pass · v2.0.0 */
+:root {
+  color-scheme: light dark;
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.62rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-micro: 120ms;
+  --dur-short: 200ms;
+  --dur-long: 420ms;
+  --rule-hair: 1px;
+
+  /* Light Mode Default: Option 03 — Coral (Felt Desk & Cotton Stock) */
+  --color-paper: oklch(94.5% 0.008 62);
+  --color-paper-2: oklch(98.8% 0.0045 80);
+  --color-paper-3: oklch(91.5% 0.009 56);
+  --color-well: oklch(96.4% 0.006 68);
+  --color-well-ink: oklch(23% 0.012 38);
+  --color-well-muted: oklch(45% 0.013 45);
+  --color-ink: oklch(21% 0.012 38);
+  --color-ink-2: oklch(30% 0.013 40);
+  --color-muted: oklch(45% 0.013 45);
+  --color-rule: oklch(86% 0.01 55);
+  --color-rule-2: oklch(79% 0.013 55);
+
+  --color-accent: oklch(22% 0.011 40);
+  --color-accent-hover: oklch(29% 0.013 40);
+  --color-accent-ink: oklch(97% 0.006 70);
+  --color-human: oklch(49% 0.175 28);
+  --color-human-soft: oklch(91.5% 0.045 30);
+  --color-agent: oklch(42% 0.145 255);
+  --color-agent-soft: oklch(91.8% 0.038 255);
+  --color-ok: oklch(43% 0.12 148);
+  --color-ok-soft: oklch(94% 0.025 148);
+  --color-bad: oklch(47% 0.17 28);
+  --color-bad-soft: oklch(94.5% 0.03 28);
+  --color-focus: oklch(54% 0.17 30);
+  --color-backdrop: oklch(18% 0.01 40 / 0.52);
+
+  --surface-wash: radial-gradient(85% 110% at 0% 20%, oklch(98.8% 0.0045 80 / 0.65), transparent 62%);
+  --font-display: "General Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-display);
+  --font-outlier: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+  --radius-card: 8px;
+  --radius-ctrl: 8px;
+  --radius-chip: 4px;
+  --shadow-card: inset 0 1px 0 oklch(100% 0.005 80 / 0.9), 0 0 0 0.5px oklch(32% 0.03 50 / 0.18),
+    4px 4px 10px -6px oklch(32% 0.03 50 / 0.24);
+  --shadow-btn: inset 0 1px 0 oklch(100% 0.005 80 / 0.95), 0 0 0 0.5px oklch(32% 0.03 50 / 0.24),
+    3px 3px 7px -4px oklch(32% 0.03 50 / 0.25);
+  --shadow-btn-primary: 3px 3px 8px -3px oklch(20% 0.01 38 / 0.35);
+  --tracking-display: -0.026em;
+  --display-weight: 600;
+}
+
+/* Dark Mode Override: Option 01 — Console (Graphite Workbench) */
+[data-mode="dark"] {
+  color-scheme: dark;
+  --color-paper: oklch(17% 0.008 250);
+  --color-paper-2: oklch(21% 0.009 250);
+  --color-paper-3: oklch(24.5% 0.01 250);
+  --color-well: oklch(13.5% 0.007 250);
+  --color-well-ink: oklch(92% 0.006 250);
+  --color-well-muted: oklch(70% 0.01 250);
+  --color-ink: oklch(95% 0.005 250);
+  --color-ink-2: oklch(83% 0.008 250);
+  --color-muted: oklch(71% 0.01 250);
+  --color-rule: oklch(31% 0.01 250);
+  --color-rule-2: oklch(42% 0.012 250);
+
+  --color-accent: oklch(82% 0.15 80);
+  --color-accent-hover: oklch(86% 0.14 80);
+  --color-accent-ink: oklch(18% 0.04 75);
+  --color-human: oklch(83% 0.155 78);
+  --color-human-soft: oklch(28.5% 0.062 78);
+  --color-agent: oklch(78% 0.14 248);
+  --color-agent-soft: oklch(28% 0.068 248);
+  --color-ok: oklch(76% 0.15 150);
+  --color-ok-soft: oklch(24.5% 0.03 150);
+  --color-bad: oklch(70% 0.17 25);
+  --color-bad-soft: oklch(24.5% 0.035 25);
+  --color-focus: oklch(82% 0.15 80);
+  --color-backdrop: oklch(8% 0.005 250 / 0.68);
+
+  --surface-wash: none;
+  --font-display: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-display);
+  --radius-card: 10px;
+  --radius-ctrl: 6px;
+  --radius-chip: 4px;
+  --shadow-card: none;
+  --shadow-btn: none;
+  --shadow-btn-primary: none;
+  --tracking-display: -0.025em;
+  --display-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]) {
+    color-scheme: dark;
+    --color-paper: oklch(17% 0.008 250);
+    --color-paper-2: oklch(21% 0.009 250);
+    --color-paper-3: oklch(24.5% 0.01 250);
+    --color-well: oklch(13.5% 0.007 250);
+    --color-well-ink: oklch(92% 0.006 250);
+    --color-well-muted: oklch(70% 0.01 250);
+    --color-ink: oklch(95% 0.005 250);
+    --color-ink-2: oklch(83% 0.008 250);
+    --color-muted: oklch(71% 0.01 250);
+    --color-rule: oklch(31% 0.01 250);
+    --color-rule-2: oklch(42% 0.012 250);
+    --color-accent: oklch(82% 0.15 80);
+    --color-accent-hover: oklch(86% 0.14 80);
+    --color-accent-ink: oklch(18% 0.04 75);
+    --color-human: oklch(83% 0.155 78);
+    --color-human-soft: oklch(28.5% 0.062 78);
+    --color-agent: oklch(78% 0.14 248);
+    --color-agent-soft: oklch(28% 0.068 248);
+    --color-ok: oklch(76% 0.15 150);
+    --color-ok-soft: oklch(24.5% 0.03 150);
+    --color-bad: oklch(70% 0.17 25);
+    --color-bad-soft: oklch(24.5% 0.035 25);
+    --color-focus: oklch(82% 0.15 80);
+    --color-backdrop: oklch(8% 0.005 250 / 0.68);
+    --surface-wash: none;
+    --font-display: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+    --font-body: var(--font-display);
+    --radius-card: 10px;
+    --radius-ctrl: 6px;
+    --radius-chip: 4px;
+    --shadow-card: none;
+    --shadow-btn: none;
+    --shadow-btn-primary: none;
+    --tracking-display: -0.025em;
+    --display-weight: 500;
+  }
+}
