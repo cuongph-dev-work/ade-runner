@@ -38,6 +38,11 @@ import { registerOrchestrationRoutes } from "./routes/orchestration.js";
 import { syncProjectAdeConfig, watchProjectAdeDirectory } from "./config/ade-loader.js";
 import { SettingsService } from "./config/settings-service.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
+import { MemoryService } from "./memory/memory-service.js";
+import { ThreadSummaryService } from "./memory/thread-summary-service.js";
+import { BudgetGuard } from "./memory/budget-guard.js";
+import { WorkflowService } from "./memory/workflow-service.js";
+import { registerMemoryRoutes } from "./routes/memory.js";
 
 export interface BuildHubAppOptions {
   dbPath: string;
@@ -62,6 +67,8 @@ export interface HubServerBundle {
   ruleEngine: RuleEngine;
   mcpTokenService: McpTokenService;
   settingsService: SettingsService;
+  memoryService: MemoryService;
+  workflowService: WorkflowService;
 }
 
 export async function buildHubApp(
@@ -104,6 +111,7 @@ export async function buildHubApp(
   const grantService = new GrantService(hubDb.sqlite);
   const mcpTokenService = new McpTokenService();
 
+  // eslint-disable-next-line prefer-const
   let runDispatcher: RunDispatcher;
 
   const gateService = new GateService({
@@ -186,11 +194,56 @@ export async function buildHubApp(
 
   chatService.setGateService(gateService);
 
+  const appendEventHelper = (env: any) => {
+    return hubDb.appendAndProject([
+      {
+        id: env.id ?? `evt_${ulid()}`,
+        type: env.type as EventType,
+        ts: env.ts ?? new Date().toISOString(),
+        project_id: env.project_id ?? null,
+        thread_id: env.thread_id ?? null,
+        run_id: env.run_id ?? null,
+        actor: env.actor ?? { type: "system", id: "ade_hub" },
+        causation_id: null,
+        correlation_id: env.thread_id ?? null,
+        payload: env.payload ?? {},
+      },
+    ]);
+  };
+
+  const memoryService = new MemoryService({
+    sqlite: hubDb.sqlite,
+    eventBus,
+    appendEvent: appendEventHelper,
+  });
+
+  const threadSummaryService = new ThreadSummaryService({
+    sqlite: hubDb.sqlite,
+    eventBus,
+    appendEvent: appendEventHelper,
+  });
+
+  const budgetGuard = new BudgetGuard({
+    sqlite: hubDb.sqlite,
+    eventBus,
+    runnerTransport,
+    appendEvent: appendEventHelper,
+    releaseThreadLock: (threadId, _runId) => {
+      runDispatcher.tryDispatchQueuedRuns(threadId);
+    },
+  });
+
+  const workflowService = new WorkflowService({
+    sqlite: hubDb.sqlite,
+    eventBus,
+  });
+
   const mcpServer = new McpServer({
     sqlite: hubDb.sqlite,
     grantService,
     gateService,
     threadScheduler,
+    memoryService,
     appendEvent: (evt) => {
       hubDb.appendAndProject([
         {
@@ -304,6 +357,21 @@ export async function buildHubApp(
       }));
     },
   });
+
+  runDispatcher.onUsageUpdate = (runId, costUsd, tokensIn, tokensOut) => {
+    budgetGuard.handleUsageUpdate({ runId, costUsd, tokensIn, tokensOut });
+  };
+
+  runDispatcher.onRunCompleted = (params) => {
+    threadSummaryService.updateOnRunCompleted({
+      threadId: params.threadId,
+      runId: params.runId,
+      agentHandle: params.agentHandle,
+      outcome: params.outcome,
+      summary: params.summary,
+      decisions: params.decisions,
+    });
+  };
 
   runDispatcher.onDelegationCheck = (delegationId) => {
     const finished = threadScheduler.checkAndHandleFanIn(delegationId);
@@ -522,6 +590,10 @@ export async function buildHubApp(
     sqlite: hubDb.sqlite,
     settingsService,
   });
+  await registerMemoryRoutes(app, {
+    memoryService,
+    workflowService,
+  });
 
   const distDir =
     options.webDistDir ?? resolve(import.meta.dirname, "../../web/dist");
@@ -563,5 +635,7 @@ export async function buildHubApp(
     ruleEngine,
     mcpTokenService,
     settingsService,
+    memoryService,
+    workflowService,
   };
 }

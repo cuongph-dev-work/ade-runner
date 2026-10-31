@@ -12,11 +12,21 @@ import {
   deleteSkillApi,
   fetchHarnessesApi
 } from "../../api/settings.js";
+import {
+  fetchMemoryFilesApi,
+  saveMemoryFileApi,
+  fetchMemoryProposalsApi,
+  decideMemoryProposalApi,
+  fetchWorkflowDetailApi,
+  saveWorkflowYamlApi
+} from "../../api/memory.js";
 import type {
   ProjectSettingsResponse,
   SkillItem,
   TestAgentResult,
-  HarnessItem
+  HarnessItem,
+  MemoryFile,
+  MemoryProposal
 } from "@ade/shared";
 
 export interface ProjectSettingsModalProps {
@@ -74,6 +84,62 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   const [skillContentInput, setSkillContentInput] = useState("");
   const [skillError, setSkillError] = useState<string | null>(null);
   const [isSavingSkill, setIsSavingSkill] = useState(false);
+
+  // Workflows tab state
+  const [selectedWorkflow, setSelectedWorkflow] = useState<string>("feature");
+  const [workflowYaml, setWorkflowYaml] = useState<string>("");
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
+  const [isSavingWorkflow, setIsSavingWorkflow] = useState(false);
+
+  // Memory tab state
+  const [memoryFiles, setMemoryFiles] = useState<MemoryFile[]>([]);
+  const [selectedMemoryFileName, setSelectedMemoryFileName] = useState<string | null>(null);
+  const [memoryFileContent, setMemoryFileContent] = useState<string>("");
+  const [memoryProposals, setMemoryProposals] = useState<MemoryProposal[]>([]);
+  const [memoryError, setMemoryError] = useState<string | null>(null);
+  const [isSavingMemoryFile, setIsSavingMemoryFile] = useState(false);
+
+  const loadWorkflowYaml = async (wfId: string) => {
+    setWorkflowError(null);
+    try {
+      const res = await fetchWorkflowDetailApi(projectId, wfId);
+      setWorkflowYaml(res.workflowYaml);
+      if (res.parseError) {
+        setWorkflowError(`Lỗi cấu trúc Workflow: ${res.parseError.message}`);
+      }
+    } catch (err: any) {
+      setWorkflowError(err.message || "Không thể tải chi tiết Workflow.");
+    }
+  };
+
+  const loadMemoryData = async () => {
+    setMemoryError(null);
+    try {
+      const [filesRes, proposalsRes] = await Promise.all([
+        fetchMemoryFilesApi(projectId),
+        fetchMemoryProposalsApi(projectId)
+      ]);
+      setMemoryFiles(filesRes.files);
+      setMemoryProposals(proposalsRes.proposals);
+      if (filesRes.files.length > 0) {
+        const curFile = selectedMemoryFileName
+          ? filesRes.files.find((f) => f.fileName === selectedMemoryFileName) ?? filesRes.files[0]
+          : filesRes.files[0];
+        setSelectedMemoryFileName(curFile.fileName);
+        setMemoryFileContent(curFile.content);
+      }
+    } catch (err: any) {
+      setMemoryError(err.message || "Không thể tải dữ liệu Memory.");
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "workflows") {
+      void loadWorkflowYaml(selectedWorkflow);
+    } else if (activeTab === "memory") {
+      void loadMemoryData();
+    }
+  }, [activeTab, selectedWorkflow]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -275,6 +341,50 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     }
   };
 
+  const handleSaveWorkflow = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWorkflowError(null);
+    setIsSavingWorkflow(true);
+    setSuccessMessage(null);
+    try {
+      await saveWorkflowYamlApi(projectId, selectedWorkflow, workflowYaml);
+      setSuccessMessage("Đã lưu workflow thành công.");
+      await loadWorkflowYaml(selectedWorkflow);
+    } catch (err: any) {
+      setWorkflowError(err.message || "Lỗi khi lưu workflow.");
+    } finally {
+      setIsSavingWorkflow(false);
+    }
+  };
+
+  const handleSaveMemoryFile = async () => {
+    if (!selectedMemoryFileName) return;
+    setMemoryError(null);
+    setIsSavingMemoryFile(true);
+    setSuccessMessage(null);
+    try {
+      await saveMemoryFileApi(projectId, selectedMemoryFileName, memoryFileContent);
+      setSuccessMessage(`Đã lưu tệp .ade/memory/${selectedMemoryFileName} thành công.`);
+      await loadMemoryData();
+    } catch (err: any) {
+      setMemoryError(err.message || "Lỗi khi lưu tệp memory.");
+    } finally {
+      setIsSavingMemoryFile(false);
+    }
+  };
+
+  const handleDecideMemoryProposal = async (proposalId: string, decision: "approve" | "reject") => {
+    setMemoryError(null);
+    setSuccessMessage(null);
+    try {
+      await decideMemoryProposalApi(proposalId, decision);
+      setSuccessMessage(`Đã ${decision === "approve" ? "duyệt" : "từ chối"} đề xuất thành công.`);
+      await loadMemoryData();
+    } catch (err: any) {
+      setMemoryError(err.message || "Lỗi khi xử lý đề xuất.");
+    }
+  };
+
   return (
     <div className="ade-modal-backdrop" style={{ zIndex: 9999 }}>
       <div
@@ -335,11 +445,21 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
           >
             Harnesses
           </button>
-          <button type="button" disabled className="ade-btn ade-btn--sm ade-muted opacity-50 cursor-not-allowed">
-            Workflows (P6)
+          <button
+            type="button"
+            data-testid="tab-workflows-btn"
+            className={`ade-btn ade-btn--sm ${activeTab === "workflows" ? "ade-btn--primary" : ""}`}
+            onClick={() => setActiveTab("workflows")}
+          >
+            Workflows
           </button>
-          <button type="button" disabled className="ade-btn ade-btn--sm ade-muted opacity-50 cursor-not-allowed">
-            Memory (P6)
+          <button
+            type="button"
+            data-testid="tab-memory-btn"
+            className={`ade-btn ade-btn--sm ${activeTab === "memory" ? "ade-btn--primary" : ""}`}
+            onClick={() => setActiveTab("memory")}
+          >
+            Memory
           </button>
         </div>
 
@@ -979,6 +1099,185 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: WORKFLOWS */}
+            {activeTab === "workflows" && (
+              <div className="space-y-4 text-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <label className="font-semibold">Chọn Workflow:</label>
+                    <select
+                      value={selectedWorkflow}
+                      onChange={(e) => setSelectedWorkflow(e.target.value)}
+                      className="ade-input font-mono"
+                    >
+                      {(settings?.workflows ?? ["feature"]).map((wf) => (
+                        <option key={wf} value={wf}>
+                          {wf}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <span className="ade-muted">Tệp cấu hình: .ade/workflows/{selectedWorkflow}.yaml</span>
+                </div>
+
+                {workflowError && (
+                  <div role="alert" className="ade-panel ade-panel--bad p-2.5 text-xs text-red-600">
+                    {workflowError}
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveWorkflow} className="space-y-3">
+                  <div>
+                    <label className="block font-medium mb-1">Cú pháp Workflow YAML</label>
+                    <textarea
+                      data-testid="workflow-yaml-editor"
+                      value={workflowYaml}
+                      onChange={(e) => setWorkflowYaml(e.target.value)}
+                      rows={14}
+                      className="ade-input w-full font-mono text-xs whitespace-pre leading-relaxed"
+                      required
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      data-testid="save-workflow-btn"
+                      disabled={isSavingWorkflow}
+                      className="ade-btn ade-btn--primary"
+                    >
+                      {isSavingWorkflow ? "Đang lưu..." : "Lưu Workflow"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* TAB: MEMORY */}
+            {activeTab === "memory" && (
+              <div className="space-y-4 text-xs">
+                {memoryError && (
+                  <div role="alert" className="ade-panel ade-panel--bad p-2.5 text-xs text-red-600">
+                    {memoryError}
+                  </div>
+                )}
+
+                {/* Phần 1: Quản lý tệp Memory */}
+                <div className="border rounded p-3 space-y-3">
+                  <strong className="text-sm font-bold block">Tệp ghi nhớ dự án (.ade/memory/*.md)</strong>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="space-y-1 md:col-span-1 border-r pr-2">
+                      <span className="ade-muted text-2xs block mb-1">Danh sách tệp:</span>
+                      {memoryFiles.length === 0 ? (
+                        <div className="ade-muted py-2">Chưa có tệp memory nào.</div>
+                      ) : (
+                        memoryFiles.map((f) => (
+                          <button
+                            key={f.fileName}
+                            type="button"
+                            onClick={() => {
+                              setSelectedMemoryFileName(f.fileName);
+                              setMemoryFileContent(f.content);
+                            }}
+                            className={`w-full text-left p-1.5 rounded font-mono text-xs flex items-center justify-between ${
+                              selectedMemoryFileName === f.fileName
+                                ? "bg-primary/10 text-primary font-bold"
+                                : "hover:bg-muted/10"
+                            }`}
+                          >
+                            <span>{f.fileName}</span>
+                            <span className="text-2xs ade-muted">{f.sizeBytes}b</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="md:col-span-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">
+                          Đang sửa: <code className="font-mono text-primary">{selectedMemoryFileName ?? "Chưa chọn tệp"}</code>
+                        </span>
+                        <button
+                          type="button"
+                          data-testid="save-memory-file-btn"
+                          disabled={!selectedMemoryFileName || isSavingMemoryFile}
+                          onClick={handleSaveMemoryFile}
+                          className="ade-btn ade-btn--sm ade-btn--primary"
+                        >
+                          {isSavingMemoryFile ? "Đang lưu..." : "Lưu thay đổi"}
+                        </button>
+                      </div>
+                      <textarea
+                        data-testid="memory-content-editor"
+                        value={memoryFileContent}
+                        onChange={(e) => setMemoryFileContent(e.target.value)}
+                        disabled={!selectedMemoryFileName}
+                        rows={10}
+                        className="ade-input w-full font-mono text-xs leading-relaxed"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Phần 2: Đề xuất Memory từ Agent */}
+                <div className="border rounded p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <strong className="text-sm font-bold">Đề xuất Memory từ Agent (Proposals)</strong>
+                    <span className="ade-chip">{memoryProposals.length} đề xuất</span>
+                  </div>
+
+                  {memoryProposals.length === 0 ? (
+                    <div className="ade-muted py-2 text-center">Chưa có đề xuất nào từ Agent.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {memoryProposals.map((p) => (
+                        <div
+                          key={p.id}
+                          data-testid="memory-proposal-row"
+                          className="border rounded p-2.5 space-y-1.5 bg-muted/5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="ade-mention ade-mention--agent font-mono">{p.agentHandle}</span>
+                              <span className="ade-muted font-mono">→ .ade/memory/{p.targetFile}</span>
+                            </div>
+                            <div>
+                              {p.status === "pending" && <span className="ade-chip ade-chip--warn">Chờ duyệt</span>}
+                              {p.status === "approved" && <span className="text-green-600 font-semibold">✓ Đã duyệt</span>}
+                              {p.status === "rejected" && <span className="text-red-500 font-semibold">✕ Đã từ chối</span>}
+                            </div>
+                          </div>
+                          <div className="text-xs"><strong>Lý do:</strong> {p.reason}</div>
+                          <pre className="bg-muted/10 p-2 rounded font-mono text-2xs overflow-auto max-h-24 whitespace-pre-wrap border">
+                            {p.content}
+                          </pre>
+                          {p.status === "pending" && (
+                            <div className="flex justify-end gap-2 pt-1 border-t">
+                              <button
+                                type="button"
+                                data-testid="reject-memory-proposal-btn"
+                                onClick={() => handleDecideMemoryProposal(p.id, "reject")}
+                                className="ade-btn ade-btn--sm ade-btn--danger"
+                              >
+                                Từ chối
+                              </button>
+                              <button
+                                type="button"
+                                data-testid="approve-memory-proposal-btn"
+                                onClick={() => handleDecideMemoryProposal(p.id, "approve")}
+                                className="ade-btn ade-btn--sm ade-btn--primary"
+                              >
+                                Duyệt lưu vào Memory
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

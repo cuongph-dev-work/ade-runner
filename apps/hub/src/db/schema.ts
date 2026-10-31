@@ -136,6 +136,22 @@ export const agentSkillsTable = sqliteTable(
   })
 );
 
+export const memoryProposalsTable = sqliteTable("memory_proposals", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull(),
+  threadId: text("thread_id").notNull(),
+  runId: text("run_id").notNull(),
+  agentId: text("agent_id").notNull(),
+  scope: text("scope").notNull().default("project"),
+  targetFile: text("target_file").notNull(),
+  content: text("content").notNull(),
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("pending"),
+  decidedBy: text("decided_by"),
+  decidedAt: text("decided_at"),
+  createdAt: text("created_at").notNull()
+});
+
 export const eventsTable = sqliteTable("events", {
   id: text("id").primaryKey(),
   seq: integer("seq").notNull().unique(),

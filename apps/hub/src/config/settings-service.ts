@@ -7,10 +7,9 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
-  statSync,
   writeFileSync
 } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { homedir } from "node:os";
 import type Database from "better-sqlite3";
 import { stringify as stringifyYaml, parse as parseYaml } from "yaml";
@@ -29,7 +28,6 @@ import {
   type TestAgentResult,
   type HarnessItem,
   AgentYamlSchema,
-  ProjectYamlSchema,
   WorkflowYamlSchema,
   SkillFrontmatterSchema
 } from "@ade/shared";
@@ -44,7 +42,7 @@ export function computeSha256(content: string | Buffer): string {
   return createHash("sha256").update(content).digest("hex");
 }
 
-export function scanSkillDirectory(skillDirPath: string, scope: "project" | "global", projectId?: string): SkillItem | null {
+export function scanSkillDirectory(skillDirPath: string, scope: "project" | "global", _projectId?: string): SkillItem | null {
   const skillMdPath = join(skillDirPath, "SKILL.md");
   if (!existsSync(skillMdPath)) {
     return null;

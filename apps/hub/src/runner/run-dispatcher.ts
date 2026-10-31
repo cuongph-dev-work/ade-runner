@@ -39,6 +39,8 @@ const RUN_SUMMARY_SELECT_SQL = `
 export class RunDispatcher {
   private readonly aggregator: ProgressAggregator;
   public onDelegationCheck?: (delegationId: string) => void;
+  public onUsageUpdate?: (runId: string, costUsd: number, tokensIn?: number, tokensOut?: number) => void;
+  public onRunCompleted?: (params: { runId: string; threadId: string; agentHandle: string; outcome?: string; summary?: string | null; decisions?: string[] }) => void;
 
   constructor(
     private readonly deps: {
@@ -685,7 +687,14 @@ export class RunDispatcher {
           .prepare("UPDATE runs SET acp_session_id = ? WHERE id = ?")
           .run(msg.acpSessionId, msg.runId);
       }
-      this.aggregator.ingest(msg.runId, msg.ts, msg.event);
+      if (msg.event.kind === "usage") {
+        if (this.onUsageUpdate) {
+          const u = msg.event.data as { cost_usd: number; tokens_in?: number; tokens_out?: number };
+          this.onUsageUpdate(msg.runId, u.cost_usd, u.tokens_in, u.tokens_out);
+        }
+      } else {
+        this.aggregator.ingest(msg.runId, msg.ts, msg.event);
+      }
     } else if (msg.type === "permission.request") {
       this.aggregator.flush(msg.runId);
       const run = this.getActiveRunRow(msg.runId);
@@ -805,6 +814,19 @@ export class RunDispatcher {
           endedAt,
         }));
         this.emitRunUpdated(msg.runId);
+        if (this.onRunCompleted) {
+          const agentRow = this.deps.sqlite
+            .prepare("SELECT handle FROM agents WHERE id = ?")
+            .get(String(run.agent_id)) as { handle: string } | undefined;
+          this.onRunCompleted({
+            runId: msg.runId,
+            threadId: String(run.thread_id),
+            agentHandle: agentRow?.handle ?? "@agent",
+            outcome,
+            summary: run.summary ? String(run.summary) : null,
+            decisions: [],
+          });
+        }
       } else {
         // S5-12 (Run/T-14 budget_exceeded) & S5-13 (Run/T-09 runtime error)
         const errorCode = overBudget

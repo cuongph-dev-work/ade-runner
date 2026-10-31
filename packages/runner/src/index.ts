@@ -10,3 +10,5 @@ export * from "./drivers/types.js";
 export * from "./drivers/claude-driver.js";
 export * from "./drivers/codex-acp-driver.js";
 export * from "./local-runner.js";
+export * from "./context/prompt-assembler.js";
+export * from "./acp/session-pool.js";

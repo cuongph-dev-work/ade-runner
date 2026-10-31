@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { GateKindSchema, type GateKind } from "./ade-config.js";
+import { GateKindSchema } from "./ade-config.js";
 
 export const ApprovalStatusSchema = z.enum(["pending", "approved", "changes_requested", "cancelled"]);
 export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;

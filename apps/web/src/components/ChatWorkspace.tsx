@@ -10,7 +10,8 @@ import {
   type ReactionEmoji,
   type QuestionCardPayload,
   type ExplorerCardPayload,
-  type ApprovalGateCardPayload
+  type ApprovalGateCardPayload,
+  type MemoryCardPayload
 } from "@ade/shared";
 import {
   ChatApiError,
@@ -45,6 +46,8 @@ import { PermissionCard } from "./cards/PermissionCard.js";
 import { QuestionCard } from "./cards/QuestionCard.js";
 import { ExplorerCard } from "./cards/ExplorerCard.js";
 import { ApprovalGateCard } from "./cards/ApprovalGateCard.js";
+import { MemoryProposalCard } from "./cards/MemoryProposalCard.js";
+import { decideMemoryProposalApi } from "../api/memory.js";
 import { ProjectWizardModal } from "./modals/ProjectWizardModal.js";
 import { ProjectSettingsModal } from "./modals/ProjectSettingsModal.js";
 import {
@@ -189,6 +192,7 @@ export function ChatWorkspace({
   });
 
   const activeThreadId = route.threadId;
+  const activeThread = (threadsQuery.data ?? []).find((t) => t.id === activeThreadId) ?? null;
   const messagesQuery = useQuery({
     queryKey: ["messages", activeThreadId ?? ""],
     queryFn: async () => {
@@ -348,6 +352,20 @@ export function ChatWorkspace({
 
     if (msg.kind === "approval_card" && msg.card) {
       const cardPayload = typeof msg.card === "string" ? JSON.parse(msg.card) : msg.card;
+      if (cardPayload && (cardPayload.cardType === "memory_proposal" || cardPayload.proposalId || cardPayload.proposal_id)) {
+        return (
+          <div key={msg.id} className="my-2">
+            <MemoryProposalCard
+              card={cardPayload as MemoryCardPayload}
+              onDecide={async (decision) => {
+                await decideMemoryProposalApi(cardPayload.proposalId || cardPayload.proposal_id, decision);
+                void queryClient.invalidateQueries({ queryKey: ["messages", options.threadId] });
+                void queryClient.invalidateQueries({ queryKey: ["threads", activeChannel?.id] });
+              }}
+            />
+          </div>
+        );
+      }
       if (cardPayload && "gate" in cardPayload) {
         return (
           <div key={msg.id} className="my-2">
@@ -972,6 +990,11 @@ export function ChatWorkspace({
                 <span data-testid="thread-panel-reply-count" className="ade-chip">
                   {replyPanelMsgs.filter((m) => m.kind !== "system").length} phản hồi
                 </span>
+                {activeThread?.budgetUsd != null && (
+                  <span data-testid="thread-budget-badge" className="ade-chip ade-mono">
+                    Ngân sách: ${(activeThread.spentUsd ?? 0).toFixed(2)}/${activeThread.budgetUsd.toFixed(2)} USD
+                  </span>
+                )}
               </div>
 
               <div className="ade-mode-group">
@@ -999,6 +1022,12 @@ export function ChatWorkspace({
             </header>
 
             <div data-testid="message-list" className="ade-feed">
+              {activeThread?.summary ? (
+                <div data-testid="thread-summary-box" className="ade-panel p-2.5 mx-3 my-2 text-xs border rounded bg-muted/20">
+                  <div className="font-semibold text-muted-foreground mb-1">Tóm tắt tiến độ Thread:</div>
+                  <div className="whitespace-pre-wrap">{activeThread.summary}</div>
+                </div>
+              ) : null}
               {rootPanelMsg &&
                 renderMessageCard(rootPanelMsg, {
                   threadId: activeThreadId,

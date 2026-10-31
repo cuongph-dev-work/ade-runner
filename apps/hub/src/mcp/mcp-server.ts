@@ -1,3 +1,5 @@
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { ulid } from "ulid";
 import {
@@ -9,6 +11,8 @@ import {
   McpDelegateInputSchema,
   McpRequestApprovalInputSchema,
   McpWriteScratchpadInputSchema,
+  McpReadMemoryInputSchema,
+  McpProposeMemoryInputSchema,
   type ExplorerCardPayload,
   type QuestionCardPayload,
   type EventType,
@@ -18,6 +22,7 @@ import {
 import type { GrantService } from "../trigger/grant-service.js";
 import type { GateService } from "../orchestration/gate-service.js";
 import type { ThreadScheduler } from "../orchestration/thread-scheduler.js";
+import type { MemoryService } from "../memory/memory-service.js";
 import type { McpTokenClaims } from "./mcp-token-service.js";
 import { HubMcpError } from "./mcp-token-service.js";
 
@@ -26,6 +31,7 @@ export interface McpServerDeps {
   grantService: GrantService;
   gateService?: GateService;
   threadScheduler?: ThreadScheduler;
+  memoryService?: MemoryService;
   appendEvent: (evt: {
     type: EventType;
     projectId: string | null;
@@ -196,6 +202,31 @@ export class McpServer {
                   reason: { type: "string" },
                 },
                 required: ["to", "reason"],
+              },
+            },
+            {
+              name: "read_memory",
+              description: "Đọc toàn văn các tệp sổ tay kiến thức dự án (.ade/memory/*.md).",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  scope: { type: "string", enum: ["project"] },
+                  query: { type: "string" },
+                },
+              },
+            },
+            {
+              name: "propose_memory",
+              description: "Đề xuất ghi nhớ kiến thức dự án vào .ade/memory/*.md (chờ người dùng duyệt).",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  scope: { type: "string", enum: ["project"] },
+                  target_file: { type: "string" },
+                  content: { type: "string" },
+                  reason: { type: "string" },
+                },
+                required: ["scope", "target_file", "content", "reason"],
               },
             },
           ],
@@ -553,6 +584,58 @@ export class McpServer {
         content: row?.content ?? "",
         updated_at: row?.updated_at ?? null,
       };
+    }
+
+    if (toolName === "read_memory") {
+      const input = McpReadMemoryInputSchema.parse(args);
+      const row = this.deps.sqlite
+        .prepare("SELECT repo_path FROM projects WHERE id = ?")
+        .get(claims.project_id) as { repo_path: string } | undefined;
+      const memDir = row ? join(row.repo_path, ".ade", "memory") : "";
+      const files: Array<{ file_name: string; content: string; size_bytes: number }> = [];
+
+      if (memDir && existsSync(memDir)) {
+        const entries = readdirSync(memDir, { withFileTypes: true })
+          .filter((e) => e.isFile() && e.name.endsWith(".md"))
+          .map((e) => e.name)
+          .sort((a, b) => a.localeCompare(b, "en"));
+
+        for (const name of entries) {
+          if (input.query && !name.toLowerCase().includes(input.query.toLowerCase())) {
+            continue;
+          }
+          const fullPath = join(memDir, name);
+          const stat = statSync(fullPath);
+          const content = readFileSync(fullPath, "utf8");
+          files.push({
+            file_name: name,
+            content,
+            size_bytes: stat.size,
+          });
+        }
+      }
+
+      return { ok: true, files };
+    }
+
+    if (toolName === "propose_memory") {
+      if (!this.deps.memoryService) {
+        throw new HubMcpError(500, "ERR_INTERNAL_ERROR", "MemoryService chưa được cấu hình trên ADE MCP Server");
+      }
+      const input = McpProposeMemoryInputSchema.parse(args);
+      const res = this.deps.memoryService.proposeMemory({
+        projectId: claims.project_id,
+        threadId: claims.thread_id,
+        runId: claims.run_id,
+        agentId: claims.agent_id,
+        target_file: input.target_file,
+        content: input.content,
+        reason: input.reason,
+      });
+      if (res.message_id) {
+        this.broadcastMessage(res.message_id, claims.thread_id, claims.project_id);
+      }
+      return res;
     }
 
     if (toolName === "set_state") {

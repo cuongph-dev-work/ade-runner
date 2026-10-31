@@ -17,7 +17,7 @@ export interface ApprovalGateCardProps {
 
 export const ApprovalGateCard: React.FC<ApprovalGateCardProps> = ({
   card,
-  threadId,
+  threadId: _threadId,
   onDecision,
 }) => {
   const [showFeedback, setShowFeedback] = useState(false);

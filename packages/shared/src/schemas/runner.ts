@@ -71,6 +71,14 @@ export const NormalizedRunEventSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("step"),
     data: StepLogItemSchema
+  }),
+  z.object({
+    kind: z.literal("usage"),
+    data: z.object({
+      cost_usd: z.number(),
+      tokens_in: z.number().optional(),
+      tokens_out: z.number().optional()
+    })
   })
 ]);
 export type NormalizedRunEvent = z.infer<typeof NormalizedRunEventSchema>;

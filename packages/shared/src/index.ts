@@ -8,3 +8,4 @@ export * from "./schemas/ade-config.js";
 export * from "./schemas/chat.js";
 export * from "./schemas/orchestration.js";
 export * from "./schemas/settings.js";
+export * from "./schemas/memory.js";

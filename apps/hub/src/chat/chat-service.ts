@@ -14,7 +14,6 @@ import {
   type DeleteChannelResponse,
   type EventEnvelope,
   type ErrorCode,
-  type FieldErrorMap,
   type Message,
   type PostMessageResponse,
   type ProjectSummary,
@@ -38,7 +37,7 @@ export class HubDomainError extends Error {
   constructor(
     public readonly statusCode: number,
     public readonly code: ErrorCode,
-    public readonly details: { fieldErrors?: FieldErrorMap } = {}
+    public readonly details: Record<string, unknown> = {}
   ) {
     super(ERROR_CODES[code].defaultMessage);
     this.name = "HubDomainError";

@@ -1,0 +1,17 @@
+agent: "@lead"
+steps:
+  - message: "Xin chào, tôi là Lead điều phối. Tôi đang lên kế hoạch triển khai toàn bộ tính năng và trình cổng duyệt Plan."
+  - mcp:
+      tool: "request_approval"
+      args:
+        gate: "plan"
+        summary: "Kế hoạch triển khai kiến trúc Auth và lưu trữ Memory"
+        target_state: "building"
+  - message: "Đang chờ bạn phê duyệt cổng kế hoạch..."
+  - mcp:
+      tool: "report_outcome"
+      args:
+        status: "done"
+        summary: "Lead đã lập xong kế hoạch và trình cổng duyệt Plan v1"
+        decisions:
+          - "Chốt kiến trúc SQLite và Tokens.css"

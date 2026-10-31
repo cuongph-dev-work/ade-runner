@@ -271,6 +271,25 @@ CREATE TABLE IF NOT EXISTS agent_skills (
   skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
   PRIMARY KEY (agent_id, skill_id)
 );
+
+CREATE TABLE IF NOT EXISTS memory_proposals (
+  id TEXT PRIMARY KEY NOT NULL,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  thread_id TEXT NOT NULL REFERENCES threads(id),
+  run_id TEXT NOT NULL,
+  agent_id TEXT NOT NULL REFERENCES agents(id),
+  scope TEXT NOT NULL DEFAULT 'project',
+  target_file TEXT NOT NULL,
+  content TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  decided_by TEXT,
+  decided_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_proposals_project_status
+ON memory_proposals(project_id, status);
 `;
 
 export function openHubDatabase(dbPath: string): HubDatabase {
@@ -331,6 +350,7 @@ export function openHubDatabase(dbPath: string): HubDatabase {
   const rebuildTx = sqlite.transaction(
     (afterReplay?: (sqliteConn: Database.Database) => void): void => {
       sqlite.exec(`
+        DELETE FROM memory_proposals;
         DELETE FROM run_logs;
         DELETE FROM runs;
         DELETE FROM runners;

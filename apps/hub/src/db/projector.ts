@@ -498,6 +498,79 @@ export function applyEventToProjection(
       break;
     }
 
+    case "thread.summary_updated": {
+      const threadId = event.thread_id ?? (event.payload.thread_id as string | undefined);
+      if (threadId) {
+        sqlite
+          .prepare("UPDATE threads SET summary = ?, updated_at = ? WHERE id = ?")
+          .run(String(event.payload.summary ?? ""), event.ts, threadId);
+      }
+      break;
+    }
+
+    case "memory.proposed": {
+      const p = event.payload;
+      sqlite
+        .prepare(
+          `INSERT INTO memory_proposals (
+             id, project_id, thread_id, run_id, agent_id, scope, target_file, content, reason, status, created_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+           ON CONFLICT(id) DO NOTHING`
+        )
+        .run(
+          String(p.proposal_id ?? event.id),
+          String(event.project_id ?? p.project_id),
+          String(event.thread_id ?? p.thread_id),
+          String(event.run_id ?? p.run_id),
+          String(p.agent_id),
+          String(p.scope ?? "project"),
+          String(p.target_file),
+          String(p.content),
+          String(p.reason),
+          event.ts
+        );
+      break;
+    }
+
+    case "memory.resolved": {
+      const p = event.payload;
+      const proposalId = String(p.proposal_id);
+      const decision = String(p.decision ?? p.action ?? "reject");
+      const status = decision === "approve" ? "approved" : "rejected";
+      sqlite
+        .prepare(
+          "UPDATE memory_proposals SET status = ?, decided_by = ?, decided_at = ? WHERE id = ?"
+        )
+        .run(status, event.actor.id, event.ts, proposalId);
+
+      const msgRow = sqlite
+        .prepare(
+          "SELECT id, card_json FROM messages WHERE card_json LIKE ? ORDER BY created_at DESC LIMIT 1"
+        )
+        .get(`%"proposalId":"${proposalId}"%`) as { id: string; card_json: string } | undefined;
+      if (msgRow) {
+        try {
+          const card = JSON.parse(msgRow.card_json);
+          card.status = status;
+          sqlite
+            .prepare("UPDATE messages SET card_json = ?, updated_at = ? WHERE id = ?")
+            .run(JSON.stringify(card), event.ts, msgRow.id);
+        } catch {}
+      }
+      break;
+    }
+
+    case "run.usage_updated": {
+      const runId = event.run_id ?? (event.payload.run_id as string | undefined);
+      if (runId) {
+        const cost = Number(event.payload.cost_usd ?? 0);
+        sqlite
+          .prepare("UPDATE runs SET cost_usd = ? WHERE id = ?")
+          .run(cost, runId);
+      }
+      break;
+    }
+
     case "runner.connected":
     case "runner.disconnected":
     case "run.queued":
