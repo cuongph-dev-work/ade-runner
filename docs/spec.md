@@ -8,16 +8,16 @@ PoC chứng minh một vòng khép kín: gõ `@coder` trong thread → Local Run
 
 **Tiêu chí thành công**
 
-- [ ] @mention một agent trong thread → agent bắt đầu chạy trong < 5 giây
-- [ ] Live card cập nhật tại chỗ (1 message/agent/run), không spam
-- [ ] `request_permission` của harness hiện thành approval card; bấm Approve/Deny trên web → harness nhận đúng kết quả
-- [ ] Cùng một thread gọi được cả Claude Code (subscription) và Codex (Sign in with ChatGPT)
-- [ ] Agent gọi được tool của ADE MCP (`report_outcome`, `post_progress`, `ask_human`, `read_memory`)
-- [ ] Agent chưa được mention vào thread thì mọi tool đọc thread đó đều bị từ chối
-- [ ] Main agent giao việc cho 3 worker chạy song song và nhận đủ kết quả trong một lần `session/prompt`
-- [ ] Thread không vượt qua cổng plan/review khi chưa có người duyệt; yêu cầu sửa tạo version mới
-- [ ] Tạo project qua UI, thêm agent và gắn skill; run kế tiếp của agent Claude chỉ thấy đúng skill đã gắn, không thấy skill, plugin, subagent cá nhân của dev
-- [ ] Project memory + thread summary được inject vào prompt mỗi lần gọi
+- [x] @mention một agent trong thread → agent bắt đầu chạy trong < 5 giây
+- [x] Live card cập nhật tại chỗ (1 message/agent/run), không spam
+- [x] `request_permission` của harness hiện thành approval card; bấm Approve/Deny trên web → harness nhận đúng kết quả
+- [x] Cùng một thread gọi được cả Claude Code (subscription) và Codex (Sign in with ChatGPT)
+- [x] Agent gọi được tool của ADE MCP (`report_outcome`, `post_progress`, `ask_human`, `read_memory`)
+- [x] Agent chưa được mention vào thread thì mọi tool đọc thread đó đều bị từ chối
+- [x] Main agent giao việc cho 3 worker chạy song song và nhận đủ kết quả trong một lần `session/prompt`
+- [x] Thread không vượt qua cổng plan/review khi chưa có người duyệt; yêu cầu sửa tạo version mới
+- [x] Tạo project qua UI, thêm agent và gắn skill; run kế tiếp của agent Claude chỉ thấy đúng skill đã gắn, không thấy skill, plugin, subagent cá nhân của dev
+- [x] Project memory + thread summary được inject vào prompt mỗi lần gọi
 
 **Ngoài phạm vi PoC:** merge PR, diff viewer, CI, Kanban board, fork thread, skill marketplace, mobile, multi-tenant/billing, workflow editor kéo thả.
 
@@ -263,8 +263,8 @@ Runner inject MCP server này vào mọi session qua `session/new` (`mcpServers`
 | --- | --- | --- | --- | --- |
 | `report_outcome` | status (done/blocked/needs\_revision), summary, decisions\[\] | ok | ghi vào `runs.outcome`, đi kèm `run.completed` | mọi agent; gọi cuối mỗi run |
 | `post_progress` | text, step?, percent? | ok | `run.progress` | mọi agent |
-| `post_message` | text, kind? (note/result) | message\_id | `message.posted` | mọi agent |
-| `ask_human` | question, options\[\]?, timeout\_s? | answer (chờ đến khi có) | `question.asked` → `approval.resolved` | mọi agent |
+| `post_message` | text, kind? (note/result/explorer\_card), explorer? (topic, flow\_steps\[\], trace\_steps\[\]?, citations\[\]) | message\_id | `message.posted` | mọi agent |
+| `ask_human` | question, options\[\]?, questions\[\]? (single/multi/text + allow\_other + suggestions\[\]), timeout\_s? | answer, option\_id?, answers\[\]? (chờ đến khi có) | `question.asked` → `question.answered` / `question.timed_out` | mọi agent |
 | `read_memory` | scope (project/thread), query? | entries\[\] | — | mọi agent |
 | `propose_memory` | scope, content, reason | proposal\_id | `memory.proposed` | mọi agent; người duyệt mới ghi |
 | `get_thread` | include\_messages? (n) | title, state, summary, messages\[\] | — | mọi agent |

@@ -1,0 +1,6 @@
+agent: "@fake_perm"
+steps:
+  - plan: ["Kiểm tra mã nguồn", "Chạy kiểm thử tự động"]
+  - request_permission: { tool: Bash, command: "npm test" }
+  - tool_call: { name: Bash, command: "npm test" }
+  - message: "Lệnh npm test đã chạy thành công sau khi được cấp quyền."

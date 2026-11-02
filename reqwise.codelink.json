@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "project": {
+    "id": "p-d52b16",
+    "name": "ade-runner-monorepo"
+  },
+  "figmaFiles": [
+    {
+      "id": "f-759bda",
+      "name": "Untitled"
+    }
+  ],
+  "components": [
+    {
+      "figma": {
+        "id": "1:3352",
+        "name": "NotificationBadge",
+        "file": "f-759bda"
+      },
+      "code": {
+        "path": "apps/web/src/components/ui/NotificationBadge.tsx",
+        "export": "NotificationBadge"
+      },
+      "map": [
+        {
+          "figma": "Type",
+          "kind": "variant",
+          "prop": "type",
+          "values": {
+            "count": "count",
+            "dot": "dot",
+            "gate": "gate",
+            "mention": "mention"
+          }
+        }
+      ],
+      "snapshot": {
+        "design": {
+          "axes": {
+            "Type": [
+              "count",
+              "dot",
+              "gate",
+              "mention"
+            ]
+          },
+          "props": {}
+        },
+        "code": {
+          "props": {
+            "badgeType": "enum:count|dot|gate|mention",
+            "children": "node",
+            "className": "string",
+            "count": "number",
+            "label": "string",
+            "type": "enum:count|dot|gate|mention"
+          },
+          "known": true
+        }
+      },
+      "linkedAt": "2026-11-01T15:27:34.183Z"
+    },
+    {
+      "figma": {
+        "id": "1:3363",
+        "name": "NotificationItem",
+        "file": "f-759bda"
+      },
+      "code": {
+        "path": "apps/web/src/components/ui/NotificationItem.tsx",
+        "export": "NotificationItem"
+      },
+      "map": [
+        {
+          "figma": "Type",
+          "kind": "variant",
+          "prop": "itemType",
+          "values": {
+            "mention": "mention",
+            "approval": "approval"
+          }
+        }
+      ],
+      "snapshot": {
+        "design": {
+          "axes": {
+            "Type": [
+              "approval",
+              "mention"
+            ]
+          },
+          "props": {}
+        },
+        "code": {
+          "props": {
+            "actionLabel": "string",
+            "children": "node",
+            "className": "string",
+            "itemType": "enum:approval|mention",
+            "time": "string",
+            "title": "string",
+            "unread": "boolean"
+          },
+          "known": true
+        }
+      },
+      "linkedAt": "2026-11-01T15:27:34.183Z"
+    },
+    {
+      "figma": {
+        "id": "1:3770",
+        "name": "Avatar",
+        "file": "f-759bda"
+      },
+      "code": {
+        "path": "apps/web/src/components/ui/Avatar.tsx",
+        "export": "Avatar"
+      },
+      "map": [
+        {
+          "figma": "Tone",
+          "kind": "variant",
+          "prop": "tone",
+          "values": {
+            "human": "human",
+            "peer": "peer",
+            "agent": "agent",
+            "lead": "lead"
+          }
+        }
+      ],
+      "snapshot": {
+        "design": {
+          "axes": {
+            "Tone": [
+              "agent",
+              "human",
+              "lead",
+              "peer"
+            ]
+          },
+          "props": {}
+        },
+        "code": {
+          "props": {
+            "children": "node",
+            "className": "string",
+            "initials": "string",
+            "presence": "enum:busy|offline|online|running",
+            "size": "other",
+            "tone": "enum:agent|human|lead|peer"
+          },
+          "known": true
+        }
+      },
+      "linkedAt": "2026-11-01T15:27:34.183Z"
+    },
+    {
+      "figma": {
+        "id": "1:3781",
+        "name": "Icon",
+        "file": "f-759bda"
+      },
+      "code": {
+        "path": "apps/web/src/components/ui/Icon.tsx",
+        "export": "Icon"
+      },
+      "map": [
+        {
+          "figma": "Name",
+          "kind": "variant",
+          "prop": "name",
+          "values": {
+            "close": "close",
+            "settings": "settings",
+            "plus": "plus",
+            "menu": "menu",
+            "bell": "bell"
+          }
+        }
+      ],
+      "snapshot": {
+        "design": {
+          "axes": {
+            "Name": [
+              "bell",
+              "close",
+              "menu",
+              "plus",
+              "settings"
+            ]
+          },
+          "props": {}
+        },
+        "code": {
+          "props": {
+            "className": "string",
+            "name": "enum:alert|at|bell|bot|check|close|collapse|expand|mention|menu|plus|reply|search|send|settings|smile|user",
+            "size": "number"
+          },
+          "known": true
+        }
+      },
+      "linkedAt": "2026-11-01T16:19:11.636Z"
+    },
+    {
+      "figma": {
+        "id": "1:3800",
+        "name": "IconButton",
+        "file": "f-759bda"
+      },
+      "code": {
+        "path": "apps/web/src/components/ui/IconButton.tsx",
+        "export": "IconButton"
+      },
+      "map": [
+        {
+          "figma": "Variant",
+          "kind": "variant",
+          "prop": "variant",
+          "values": {
+            "outlined": "outlined",
+            "ghost": "ghost",
+            "surface": "surface"
+          }
+        },
+        {
+          "figma": "Size",
+          "kind": "variant",
+          "prop": "size",
+          "values": {
+            "28": "28",
+            "32": "32"
+          }
+        }
+      ],
+      "snapshot": {
+        "design": {
+          "axes": {
+            "Size": [
+              "28",
+              "32"
+            ],
+            "Variant": [
+              "ghost",
+              "outlined",
+              "surface"
+            ]
+          },
+          "props": {}
+        },
+        "code": {
+          "props": {
+            "children": "node",
+            "className": "string",
+            "disabled": "boolean",
+            "size": "other",
+            "type": "string",
+            "variant": "enum:ghost|outlined|surface"
+          },
+          "known": true
+        }
+      },
+      "linkedAt": "2026-11-01T15:27:34.183Z"
+    },
+    {
+      "figma": {
+        "id": "1:3809",
+        "name": "Button",
+        "file": "f-759bda"
+      },
+      "code": {
+        "path": "apps/web/src/components/ui/Button.tsx",
+        "export": "Button"
+      },
+      "map": [
+        {
+          "figma": "Type",
+          "kind": "variant",
+          "prop": "variant",
+          "values": {
+            "primary": "primary",
+            "secondary": "secondary",
+            "ghost": "ghost",
+            "danger": "danger"
+          }
+        }
+      ],
+      "snapshot": {
+        "design": {
+          "axes": {
+            "Type": [
+              "danger",
+              "ghost",
+              "primary",
+              "secondary"
+            ]
+          },
+          "props": {}
+        },
+        "code": {
+          "props": {
+            "btnType": "enum:danger|ghost|primary|secondary",
+            "children": "node",
+            "className": "string",
+            "disabled": "boolean",
+            "size": "enum:lg|md|sm",
+            "type": "string",
+            "variant": "enum:danger|ghost|primary|secondary"
+          },
+          "known": true
+        }
+      },
+      "linkedAt": "2026-11-01T15:27:34.183Z"
+    },
+    {
+      "figma": {
+        "id": "1:3820",
+        "name": "Chip",
+        "file": "f-759bda"
+      },
+      "code": {
+        "path": "apps/web/src/components/ui/Chip.tsx",
+        "export": "Chip"
+      },
+      "map": [
+        {
+          "figma": "Type",
+          "kind": "variant",
+          "prop": "type",
+          "values": {
+            "default": "default",
+            "human": "human",
+            "agent": "agent",
+            "ok": "ok",
+            "danger": "danger"
+          }
+        }
+      ],
+      "snapshot": {
+        "design": {
+          "axes": {
+            "Type": [
+              "agent",
+              "danger",
+              "default",
+              "human",
+              "ok"
+            ]
+          },
+          "props": {}
+        },
+        "code": {
+          "props": {
+            "children": "node",
+            "chipType": "enum:agent|danger|default|human|ok",
+            "className": "string",
+            "type": "enum:agent|danger|default|human|ok"
+          },
+          "known": true
+        }
+      },
+      "linkedAt": "2026-11-01T15:27:34.183Z"
+    }
+  ]
+}

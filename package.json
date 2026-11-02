@@ -1,0 +1,42 @@
+{
+  "name": "ade-runner-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @ade/hub --filter @ade/web dev",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm --filter @ade/shared build && pnpm --filter @ade/runner build && pnpm -r typecheck",
+    "build": "pnpm --filter @ade/shared build && pnpm --filter @ade/runner build && pnpm --filter @ade/web build && pnpm --filter @ade/hub build",
+    "test": "vitest run",
+    "accept:p0": "pnpm build && tsx scripts/verify/p0-events-append-only.ts && playwright test e2e/p0-smoke.spec.ts",
+    "accept:p1": "pnpm build && tsx scripts/verify/replay-events.ts && tsx scripts/verify/mention-events.ts && playwright test e2e/p1-chat.spec.ts e2e/p1-mention.spec.ts e2e/p1-config-error.spec.ts",
+    "accept:p2": "pnpm build && pnpm --filter @ade/shared test && pnpm --filter @ade/runner test && pnpm --filter @ade/hub test && pnpm --filter @ade/web test && playwright test e2e/p2-live-card.spec.ts e2e/p2-permission.spec.ts e2e/p2-two-drivers.spec.ts && tsx scripts/verify/worktree.ts",
+    "accept:p3": "pnpm build && pnpm --filter @ade/shared test && pnpm --filter @ade/runner test && pnpm --filter @ade/hub test && pnpm --filter @ade/web test && playwright test e2e/p3-mcp-flow.spec.ts e2e/p3-clarifier.spec.ts e2e/p3-explorer.spec.ts && tsx scripts/verify/rule-engine.ts && tsx scripts/verify/mcp-contract.ts",
+    "accept:p4": "pnpm build && tsx scripts/verify/parallel.ts && tsx scripts/verify/fan-in.ts && tsx scripts/verify/gate.ts && tsx scripts/verify/context-scope.ts && playwright test e2e/p4-orchestration.spec.ts e2e/p4-chat-approve.spec.ts",
+    "accept:p5": "pnpm build && tsx scripts/verify/config-roundtrip.ts && tsx scripts/verify/skill-snapshot.ts && playwright test e2e/p5-wizard.spec.ts e2e/p5-agent-form.spec.ts e2e/p5-skill-editor.spec.ts e2e/p5-test-agent.spec.ts",
+    "accept:p6": "pnpm build && tsx scripts/verify/summary.ts && tsx scripts/verify/budget.ts && tsx scripts/verify/session-idle.ts && vitest run packages/runner/test/prompt-assembly.test.ts && playwright test e2e/p6-memory.spec.ts e2e/p6-demo-e2e.spec.ts",
+    "accept:all": "pnpm accept:p0 && pnpm accept:p1 && pnpm accept:p2 && pnpm accept:p3 && pnpm accept:p4 && pnpm accept:p5 && pnpm accept:p6",
+    "real:spike-claude": "tsx scripts/real/spike-claude.ts",
+    "real:spike-codex": "tsx scripts/real/spike-codex.ts",
+    "real:spike-codex-acp": "tsx scripts/real/spike-codex-acp.ts",
+    "real:isolation": "tsx scripts/real/isolation.ts",
+    "real:hello": "tsx scripts/real/hello.ts"
+  },
+  "devDependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "@eslint/js": "^9.13.0",
+    "@playwright/test": "^1.48.2",
+    "@types/node": "^22.8.6",
+    "eslint": "^9.13.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.11.0",
+    "vitest": "^2.1.4",
+    "yaml": "^2.6.0"
+  }
+}

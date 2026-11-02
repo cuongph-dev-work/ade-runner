@@ -1,0 +1,27 @@
+{
+  "name": "@ade/runner",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ade-fake-agent": "./dist/fake/ade-fake-agent.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src test",
+    "test": "vitest run test"
+  },
+  "dependencies": {
+    "@ade/shared": "workspace:*",
+    "yaml": "^2.6.0",
+    "zod": "^3.23.8"
+  }
+}

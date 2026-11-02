@@ -1,0 +1,19 @@
+agent: "@lead"
+steps:
+  - plan:
+      - "Nghiên cứu yêu cầu hệ thống"
+      - "Lập kế hoạch triển khai song song"
+      - "Trình cổng duyệt plan"
+  - message: "Chào team, tôi đã lập kế hoạch chi tiết cho tính năng mới và đang trình cổng duyệt Plan v1."
+  - mcp:
+      tool: "request_approval"
+      args:
+        gate: "plan"
+        summary: "Kế hoạch v1: Triển khai backend auth và frontend UI"
+        target_state: "spec_review"
+  - mcp:
+      tool: "write_scratchpad"
+      args:
+        content: "Ghi chú của Lead: Cần phối hợp coder, tester và qa sau khi cổng duyệt được thông qua."
+  - sleep: 0.1
+  - message: "Đang chờ người dùng phê duyệt cổng..."

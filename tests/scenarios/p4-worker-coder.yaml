@@ -1,0 +1,15 @@
+agent: "@coder"
+steps:
+  - plan:
+      - "Viết module xác thực"
+  - message: "Đang tiến hành viết mã nguồn API xác thực..."
+  - mcp:
+      tool: "write_scratchpad"
+      args:
+        content: "Coder notes: Auth API implementation details"
+  - sleep: 0.1
+  - mcp:
+      tool: "report_outcome"
+      args:
+        status: "done"
+        summary: "Đã hoàn thành viết module auth"

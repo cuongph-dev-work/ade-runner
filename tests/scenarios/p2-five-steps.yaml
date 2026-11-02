@@ -1,0 +1,13 @@
+agent: "@fake"
+steps:
+  - step: { text: "Bước 1: Phân tích cấu trúc dự án", index: 1, percent: 20 }
+  - wait_ms: 200
+  - step: { text: "Bước 2: Kiểm tra định nghĩa schema", index: 2, percent: 40 }
+  - wait_ms: 200
+  - step: { text: "Bước 3: Chuẩn bị bộ dữ liệu thử nghiệm", index: 3, percent: 60 }
+  - wait_ms: 200
+  - step: { text: "Bước 4: Thực thi đối chiếu kết quả", index: 4, percent: 80 }
+  - wait_ms: 200
+  - step: { text: "Bước 5: Tổng hợp báo cáo hoàn tất", index: 5, percent: 100 }
+  - wait_ms: 200
+  - message: "Đã hoàn thành đủ 5 bước theo kịch bản."

@@ -1,0 +1,9 @@
+handle: "planner"
+display_name: "Planner"
+role: "Lập kế hoạch và phỏng vấn làm rõ yêu cầu"
+harness: "claude-code"
+credential_profile: "sub-claude"
+skills: ["brainstorm", "spec", "plan"]
+can_be_main: true
+write: false
+enabled: true

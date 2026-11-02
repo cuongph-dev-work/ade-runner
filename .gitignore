@@ -4,12 +4,14 @@ node_modules/
 
 # Data local của hub (ADE_DATA_DIR khi chạy pnpm dev)
 .data/
+.ade-data/
 
 # Build & báo cáo test
 dist/
 apps/web/dist/
 playwright-report/
 test-results/
+captures/
 *.tsbuildinfo
 
 # Môi trường

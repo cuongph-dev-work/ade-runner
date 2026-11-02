@@ -1,0 +1,9 @@
+handle: "explorer"
+display_name: "Explorer"
+role: "Chuyên gia tra cứu chỉ đọc và giải thích logic"
+harness: "claude-code"
+credential_profile: "sub-claude"
+skills: ["explore"]
+can_be_main: false
+write: false
+enabled: true

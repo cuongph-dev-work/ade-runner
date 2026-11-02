@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+onlyBuiltDependencies:
+  - esbuild
+  - "@playwright/test"
+  - better-sqlite3
+allowBuilds:
+  esbuild: true
+  better-sqlite3: true

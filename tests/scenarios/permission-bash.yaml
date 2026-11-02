@@ -1,0 +1,5 @@
+agent: "@coder"
+steps:
+  - plan: ["Chạy bộ kiểm thử"]
+  - request_permission: { tool: Bash, command: "npm test", expect: deny }
+  - mcp: { tool: report_outcome, args: { status: blocked, summary: "Người dùng từ chối lệnh Bash" } }

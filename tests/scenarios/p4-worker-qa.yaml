@@ -1,0 +1,15 @@
+agent: "@qa"
+steps:
+  - plan:
+      - "Rà soát mã nguồn (code review)"
+  - message: "Đang rà soát diff và tuân thủ chuẩn coding..."
+  - mcp:
+      tool: "write_scratchpad"
+      args:
+        content: "QA notes: Clean code, không có finding mức chặn"
+  - sleep: 0.1
+  - mcp:
+      tool: "report_outcome"
+      args:
+        status: "done"
+        summary: "Review hoàn tất, sẵn sàng merge"

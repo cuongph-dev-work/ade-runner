@@ -1,0 +1,9 @@
+handle: "coder"
+display_name: "Coder"
+role: "Lập trình viên triển khai tính năng"
+harness: "codex"
+credential_profile: "sub-chatgpt"
+skills: ["implement"]
+can_be_main: false
+write: true
+enabled: true

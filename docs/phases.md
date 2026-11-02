@@ -200,11 +200,11 @@ Mục tiêu: memory hoạt động đủ vòng, các giới hạn an toàn chạ
 
 **Việc cần làm**
 
-- [ ] Project memory `.ade/memory/`, `propose_memory` + card duyệt, tab Memory
-- [ ] Thread summary cập nhật từ `report_outcome`, fallback nối message cuối
-- [ ] Prompt assembly theo thứ tự: project memory → thread → recent messages → skill → task
-- [ ] Tab Workflow (editor YAML có kiểm tra), budget theo agent và thread
-- [ ] Session ACP: đóng sau 30 phút idle, tối đa 4 session, mở lại kèm summary
+- [x] Project memory `.ade/memory/`, `propose_memory` + card duyệt, tab Memory
+- [x] Thread summary cập nhật từ `report_outcome`, fallback nối message cuối
+- [x] Prompt assembly theo thứ tự: project memory → thread → recent messages → skill → task
+- [x] Tab Workflow (editor YAML có kiểm tra), budget theo agent và thread
+- [x] Session ACP: đóng sau 30 phút idle, tối đa 4 session, mở lại kèm summary
 
 **Nghiệm thu**
 

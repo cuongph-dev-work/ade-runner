@@ -1,0 +1,6 @@
+name: "ade-runner"
+default_branch: "feat/cuongph/p6-memory"
+default_main_agent: "@lead"
+workflow: "feature"
+memory_path: ".ade/memory/"
+use_repo_instructions: true

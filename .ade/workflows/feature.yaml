@@ -1,0 +1,12 @@
+workflow: "feature"
+initial: "open"
+states:
+  - open
+  - planning
+  - plan_review:
+      gate: "plan"
+  - building
+  - review:
+      gate: "review"
+  - done
+rules: []

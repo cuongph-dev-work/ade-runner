@@ -1,0 +1,16 @@
+agent: "@lead"
+steps:
+  - message: "Đang phân tích kiến trúc dự án và ghi nhận các quyết định quan trọng..."
+  - mcp:
+      tool: "propose_memory"
+      args:
+        scope: "project"
+        target_file: "decisions.md"
+        reason: "Chốt quyết định dùng SQLite cho Hub"
+        content: "# Quyết định kiến trúc\n\n- Dùng SQLite local-first cho ADE Hub.\n- Dùng Drizzle ORM và Zod schema.\n"
+  - message: "Đã gửi thẻ đề xuất ghi nhớ vào .ade/memory/decisions.md để người dùng phê duyệt."
+  - report_outcome:
+      status: "done"
+      summary: "Đã hoàn thành phân tích kiến trúc và đề xuất memory"
+      decisions:
+        - "Dùng SQLite local-first"

@@ -1,0 +1,21 @@
+agent: "@coder"
+steps:
+  - message: "Coder đã nhận việc và đang hoàn thành code module theo kế hoạch."
+  - mcp:
+      tool: "write_scratchpad"
+      args:
+        content: "Coder: Code hoàn tất trong worktree"
+  - mcp:
+      tool: "propose_memory"
+      args:
+        scope: "project"
+        target_file: "decisions.md"
+        reason: "Lưu quyết định kỹ thuật từ giai đoạn implement"
+        content: "# Quyết định triển khai\n\n- Hoàn tất Auth module theo kế hoạch Lead đề xuất.\n"
+  - mcp:
+      tool: "report_outcome"
+      args:
+        status: "done"
+        summary: "Coder hoàn tất mã nguồn module và đề xuất memory"
+        decisions:
+          - "Module Auth hoạt động tốt"
