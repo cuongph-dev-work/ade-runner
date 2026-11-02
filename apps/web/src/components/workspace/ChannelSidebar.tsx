@@ -252,6 +252,7 @@ export const ChannelSidebar: React.FC<ChannelSidebarProps> = ({
                     <Avatar
                       tone={isLead ? "lead" : "agent"}
                       presence={presence}
+                      presenceTestId={`sidebar-agent-dot-${handleClean}`}
                       size={22}
                     >
                       {ini}

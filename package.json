@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @ade/hub --filter @ade/web dev",
     "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm --filter @ade/shared build && pnpm --filter @ade/runner build && pnpm -r typecheck",
     "build": "pnpm --filter @ade/shared build && pnpm --filter @ade/runner build && pnpm --filter @ade/web build && pnpm --filter @ade/hub build",
     "test": "vitest run",
     "accept:p0": "pnpm build && tsx scripts/verify/p0-events-append-only.ts && playwright test e2e/p0-smoke.spec.ts",

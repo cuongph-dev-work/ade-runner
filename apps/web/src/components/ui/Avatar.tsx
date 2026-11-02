@@ -7,6 +7,7 @@ export type AvatarSize = 22 | 28 | 32 | 40 | "22" | "28" | "32" | "40";
 export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: AvatarTone;
   presence?: AvatarPresence;
+  presenceTestId?: string;
   size?: AvatarSize;
   initials?: string;
   children?: ReactNode;
@@ -15,6 +16,7 @@ export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
 export function Avatar({
   tone = "human",
   presence = null,
+  presenceTestId,
   size = 28,
   initials,
   className = "",
@@ -54,7 +56,12 @@ export function Avatar({
   return (
     <span className={`ade-avatar ${toneClass} ${sizeClass} ${className}`.trim()} {...props}>
       {children || initials}
-      {presenceClass && <span className={`ade-presence ${presenceClass}`} />}
+      {(presenceClass || presenceTestId) && (
+        <span
+          data-testid={presenceTestId}
+          className={`ade-presence ade-presence-dot ${presenceClass}`.trim()}
+        />
+      )}
     </span>
   );
 }
