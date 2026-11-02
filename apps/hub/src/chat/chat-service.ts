@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import { ulid } from "ulid";
 import {
   ALLOWED_REACTION_EMOJIS,
-  ERROR_CODES,
   validateByCatalog,
   type AgentListResponse,
   type Channel,
@@ -13,7 +12,6 @@ import {
   type CreateThreadResponse,
   type DeleteChannelResponse,
   type EventEnvelope,
-  type ErrorCode,
   type Message,
   type PostMessageResponse,
   type ProjectSummary,
@@ -32,17 +30,9 @@ import {
 import { resolveMentions } from "./mention-parser.js";
 import type { InMemoryEventBus } from "../events/event-bus.js";
 import type { GateService } from "../orchestration/gate-service.js";
+import { HubDomainError } from "../errors.js";
 
-export class HubDomainError extends Error {
-  constructor(
-    public readonly statusCode: number,
-    public readonly code: ErrorCode,
-    public readonly details: Record<string, unknown> = {}
-  ) {
-    super(ERROR_CODES[code].defaultMessage);
-    this.name = "HubDomainError";
-  }
-}
+export { HubDomainError };
 
 interface StoredReactionBucket {
   emoji: (typeof ALLOWED_REACTION_EMOJIS)[number];

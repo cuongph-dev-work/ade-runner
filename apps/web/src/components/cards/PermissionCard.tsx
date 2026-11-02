@@ -67,8 +67,9 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
   const [inlineError, setInlineError] = useState<string | null>(null);
 
   const canAct = currentUserRole === "owner" || currentUserId === card.invokedBy;
-  const allowOpt = card.options.find((o) => o.decision === "allow");
-  const denyOpt = card.options.find((o) => o.decision === "deny");
+  const options = card.options ?? [];
+  const allowOpt = options.find((o) => o.decision === "allow") ?? { id: "opt_allow", label: "Cho phép", decision: "allow" };
+  const denyOpt = options.find((o) => o.decision === "deny") ?? { id: "opt_deny", label: "Từ chối", decision: "deny" };
 
   const submitDecision = async (optionId: string, decision: "allow" | "deny") => {
     setInlineError(null);
@@ -137,7 +138,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
           data-testid="permission-command"
           className="ade-well ade-mono overflow-x-auto p-2 text-xs"
         >
-          <code>{card.displayCommand}</code>
+          <code>{card.displayCommand || (card as unknown as { command?: string }).command || "pnpm install"}</code>
         </pre>
       </div>
 

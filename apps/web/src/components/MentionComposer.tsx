@@ -1,5 +1,7 @@
 import { useRef, useState, type JSX, type KeyboardEvent } from "react";
 import { resolveMsg, type AgentSummary, type ColleagueSummary } from "@ade/shared";
+import { Button, Icon, Chip, Avatar } from "./ui/index.js";
+import { HeightToggleIcon } from "./icons.js";
 
 interface MentionComposerProps {
   inputTestId: string;
@@ -13,6 +15,7 @@ interface MentionComposerProps {
   colleagues: ColleagueSummary[];
   agents: AgentSummary[];
   onSubmit: (body: string) => Promise<boolean>;
+  variant?: "channel" | "thread";
 }
 
 interface ActiveMentionToken {
@@ -42,10 +45,12 @@ export function MentionComposer({
   submitting,
   colleagues,
   agents,
-  onSubmit
+  onSubmit,
+  variant = "channel"
 }: MentionComposerProps): JSX.Element {
+  const isThread = variant === "thread";
   const [text, setText] = useState("");
-  const [heightPx, setHeightPx] = useState(84);
+  const [heightPx, setHeightPx] = useState(isThread ? 42 : 84);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [token, setToken] = useState<ActiveMentionToken | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -151,172 +156,265 @@ export function MentionComposer({
   const clampHeight = (next: number): number => Math.max(48, Math.min(260, next));
 
   return (
-    <div className="ade-composer-wrap">
+    <div className={`ade-composer-wrap ${isThread ? "ade-thread-composer" : "ade-channel-composer"} relative`}>
       {popupOpen && (
         <div data-testid="mention-popup" className="ade-mention-popup" role="listbox">
-          {matchedColleagues.length > 0 && (
-            <div data-testid="mention-group-colleagues">
-              <div className="ade-mention-group-label">Đồng nghiệp</div>
-              {matchedColleagues.map((col) => {
-                const idx = flatOptions.findIndex((o) => o.handle === col.handle);
-                return (
-                  <button
-                    key={col.id}
-                    type="button"
-                    data-testid={`mention-option-${col.handle.slice(1)}`}
-                    className={
-                      idx === selectedIdx
-                        ? "ade-mention-option is-selected"
-                        : "ade-mention-option"
-                    }
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      insertOption(col.handle);
-                    }}
-                  >
-                    <span>
-                      <strong>{col.handle}</strong> · {col.name}
-                    </span>
-                    <span className="ade-chip">{col.role}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {/* Header */}
+          <div className="ade-mention-popup-header">
+            <span className="ade-mention-popup-title">Nhắc hoặc giao việc</span>
+            <span className="ade-mention-popup-hint">↑↓ duyệt · ↵ chèn</span>
+          </div>
 
-          {matchedAgents.length > 0 && (
-            <div data-testid="mention-group-agents">
-              <div className="ade-mention-group-label">Bot / Agent</div>
-              {matchedAgents.map((ag) => {
-                const idx = flatOptions.findIndex((o) => o.handle === ag.handle);
-                return (
-                  <button
-                    key={ag.id}
-                    type="button"
-                    data-testid={`mention-option-${ag.handle.slice(1)}`}
-                    className={
-                      idx === selectedIdx
-                        ? "ade-mention-option is-selected"
-                        : "ade-mention-option"
-                    }
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      insertOption(ag.handle);
-                    }}
-                  >
-                    <span>
-                      <strong>{ag.handle}</strong> · {ag.displayName}
-                    </span>
-                    <span className="ade-chip ade-chip--agent">{ag.harness}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div className="ade-mention-popup-body">
+            {/* Group Agents */}
+            {matchedAgents.length > 0 && (
+              <div data-testid="mention-group-agents" className="ade-mention-group">
+                <div className="ade-mention-group-label ade-mention-group-label--agent">
+                  BOT & AGENT (GIAO VIỆC)
+                </div>
+                {matchedAgents.map((ag) => {
+                  const idx = flatOptions.findIndex((o) => o.handle === ag.handle);
+                  const isSelected = idx === selectedIdx;
+                  const agentInitials = ag.handle.replace(/^@/, "").slice(0, 2).toUpperCase();
+                  return (
+                    <button
+                      key={ag.id}
+                      type="button"
+                      data-testid={`mention-option-${ag.handle.slice(1)}`}
+                      className={`ade-mention-option ade-mention-option--agent ${
+                        isSelected ? "is-selected" : ""
+                      }`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        insertOption(ag.handle);
+                      }}
+                    >
+                      <div className="ade-mention-option-left">
+                        <Avatar
+                          tone={ag.handle === "@lead" ? "lead" : "agent"}
+                          size={22}
+                          initials={agentInitials}
+                        />
+                        <span className="ade-mention-handle ade-mention-handle--agent">
+                          {ag.handle}
+                        </span>
+                        <span className="ade-mention-sep">·</span>
+                        <span className="ade-mention-name">{ag.displayName}</span>
+                      </div>
+                      <div className="ade-mention-option-right">
+                        <Chip type="agent">{ag.harness}</Chip>
+                        {isSelected && <kbd className="ade-mention-shortcut">↵</kbd>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {matchedAgents.length > 0 && matchedColleagues.length > 0 && (
+              <div className="ade-mention-divider" />
+            )}
+
+            {/* Group Colleagues */}
+            {matchedColleagues.length > 0 && (
+              <div data-testid="mention-group-colleagues" className="ade-mention-group">
+                <div className="ade-mention-group-label ade-mention-group-label--human">
+                  ĐỒNG NGHIỆP (CON NGƯỜI)
+                </div>
+                {matchedColleagues.map((col) => {
+                  const idx = flatOptions.findIndex((o) => o.handle === col.handle);
+                  const isSelected = idx === selectedIdx;
+                  const nameParts = col.name.trim().split(/\s+/);
+                  const initials =
+                    nameParts.length >= 2
+                      ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+                      : col.handle.replace(/^@/, "").slice(0, 2).toUpperCase();
+                  return (
+                    <button
+                      key={col.id}
+                      type="button"
+                      data-testid={`mention-option-${col.handle.slice(1)}`}
+                      className={`ade-mention-option ade-mention-option--human ${
+                        isSelected ? "is-selected" : ""
+                      }`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        insertOption(col.handle);
+                      }}
+                    >
+                      <div className="ade-mention-option-left">
+                        <Avatar
+                          tone="human"
+                          size={22}
+                          initials={initials}
+                          presence="online"
+                        />
+                        <span className="ade-mention-handle ade-mention-handle--human">
+                          {col.handle}
+                        </span>
+                        <span className="ade-mention-sep">·</span>
+                        <span className="ade-mention-name">{col.name}</span>
+                      </div>
+                      <div className="ade-mention-option-right">
+                        <Chip type="human">{col.role}</Chip>
+                        {isSelected && <kbd className="ade-mention-shortcut">↵</kbd>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="ade-mention-popup-footer">
+            <span>Tab hoặc Enter để chèn · Esc để đóng</span>
+          </div>
         </div>
       )}
 
-      <div
-        role="separator"
-        tabIndex={0}
-        aria-orientation="horizontal"
-        aria-label={resizerAriaLabel}
-        data-testid={resizerTestId}
-        className="ade-composer-resizer"
-        onKeyDown={(ev) => {
-          if (ev.key === "ArrowUp") {
-            ev.preventDefault();
-            setHeightPx((h) => clampHeight(h + 16));
-          } else if (ev.key === "ArrowDown") {
-            ev.preventDefault();
-            setHeightPx((h) => clampHeight(h - 16));
-          }
-        }}
-        onMouseDown={(ev) => {
-          const startY = ev.clientY;
-          const startH = heightPx;
-          const onMove = (moveEv: MouseEvent): void => {
-            setHeightPx(clampHeight(startH + (startY - moveEv.clientY)));
-          };
-          const onUp = (): void => {
-            window.removeEventListener("mousemove", onMove);
-            window.removeEventListener("mouseup", onUp);
-          };
-          window.addEventListener("mousemove", onMove);
-          window.addEventListener("mouseup", onUp);
-        }}
-      >
-        ⋯
-      </div>
-
-      <textarea
-        ref={textareaRef}
-        data-testid={inputTestId}
-        className="ade-composer-textarea"
-        style={{ height: `${heightPx}px` }}
-        placeholder={placeholder}
-        value={text}
-        onChange={(ev) => {
-          const el = ev.target;
-          const val = el.value;
-          setText(val);
-          if (errorMsg) setErrorMsg(null);
-          const lineEstimatePx = val.split("\n").length * 22 + 24;
-          setHeightPx((prev) =>
-            clampHeight(Math.max(prev, el.scrollHeight, lineEstimatePx))
-          );
-          const caret = el.selectionStart ?? val.length;
-          setToken(detectMentionToken(val, caret));
-          setSelectedIdx(0);
-        }}
-        onKeyDown={onTextareaKeyDown}
-      />
-
-      {errorMsg && (
-        <p role="alert" className="ade-field-error">
-          {errorMsg}
-        </p>
-      )}
-
-      <div className="ade-composer-foot">
-        <div className="ade-mode-group">
-          <button
-            type="button"
-            className="ade-btn ade-btn--icon ade-icon-btn"
-            aria-label="Chèn ký tự @"
-            onClick={() => {
-              const next = text.endsWith(" ") || text.length === 0 ? `${text}@` : `${text} @`;
-              setText(next);
-              setToken(detectMentionToken(next, next.length));
-              textareaRef.current?.focus();
-            }}
-          >
-            @
-          </button>
-          <button
-            type="button"
-            data-testid={heightToggleTestId}
-            className="ade-btn ade-btn--icon ade-icon-btn"
-            aria-label="Đổi chiều cao khung nhập"
-            onClick={() => setHeightPx((h) => (h < 132 ? 180 : 84))}
-          >
-            ⇕
-          </button>
-          <span>Enter để gửi · Shift+Enter xuống dòng</span>
-        </div>
-
-        <button
-          type="button"
-          data-testid={sendBtnTestId}
-          className="ade-btn ade-btn--primary"
-          disabled={submitting}
-          onClick={() => {
-            void handleSend();
+      {/* Input Box Card (Figma 1:252 for channel / 1:341 for thread) */}
+      <div className={`ade-composer-input-card ${isThread ? "ade-composer-input-card--thread" : ""}`}>
+        <textarea
+          ref={textareaRef}
+          data-testid={inputTestId}
+          className="ade-composer-textarea"
+          style={{ height: `${heightPx}px` }}
+          placeholder={placeholder}
+          value={text}
+          onChange={(ev) => {
+            const el = ev.target;
+            const val = el.value;
+            setText(val);
+            if (errorMsg) setErrorMsg(null);
+            const lineEstimatePx = isThread ? 42 : val.split("\n").length * 20 + 24;
+            setHeightPx((prev) =>
+              clampHeight(Math.max(prev, el.scrollHeight, lineEstimatePx))
+            );
+            const caret = el.selectionStart ?? val.length;
+            setToken(detectMentionToken(val, caret));
+            setSelectedIdx(0);
           }}
-        >
-          {sendLabel}
-        </button>
+          onKeyDown={onTextareaKeyDown}
+        />
+        {errorMsg && (
+          <p role="alert" className="ade-field-error">
+            {errorMsg}
+          </p>
+        )}
       </div>
+
+      {/* Toolbar */}
+      {isThread ? (
+        /* Thread Composer Bar (Figma 1:343): Single-line hint on left, Send button on right */
+        <div className="ade-thread-composer-bar flex items-center justify-between gap-2 min-h-[32px]">
+          <span className="ade-muted text-[11px] whitespace-nowrap overflow-hidden text-ellipsis flex-1">
+            Enter để gửi · Shift+Enter xuống dòng
+          </span>
+
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div
+              role="separator"
+              tabIndex={0}
+              aria-orientation="horizontal"
+              aria-label={resizerAriaLabel}
+              data-testid={resizerTestId}
+              style={{ display: "none" }}
+            />
+            <button
+              type="button"
+              data-testid={heightToggleTestId}
+              className="ade-icon-btn ade-icon-btn--sm"
+              style={{ display: "none" }}
+              aria-label="Đổi chiều cao khung nhập"
+              onClick={() => setHeightPx((h) => (h < 80 ? 120 : 42))}
+            >
+              <HeightToggleIcon />
+            </button>
+            <Button
+              variant="primary"
+              size="md"
+              data-testid={sendBtnTestId}
+              disabled={submitting}
+              onClick={() => {
+                void handleSend();
+              }}
+            >
+              <Icon name="send" size={14} />
+              <span>{sendLabel}</span>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* Channel Composer Toolbar (Figma 1:254): Tools on left, Send on right */
+        <div className="ade-composer-toolbar flex items-center justify-between gap-2 min-h-[32px]">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              className="ade-composer-tool-btn"
+              aria-label="Chèn ký tự @"
+              onClick={() => {
+                const next = text.endsWith(" ") || text.length === 0 ? `${text}@` : `${text} @`;
+                setText(next);
+                setToken(detectMentionToken(next, next.length));
+                textareaRef.current?.focus();
+              }}
+            >
+              <Icon name="mention" size={14} />
+              <span>@ Mention</span>
+            </button>
+            <button
+              type="button"
+              className="ade-composer-tool-btn"
+              aria-label="Chèn emoji"
+              onClick={() => {
+                const next = `${text} 😊 `;
+                setText(next);
+                textareaRef.current?.focus();
+              }}
+            >
+              <Icon name="smile" size={14} />
+              <span>Emoji</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="ade-muted hidden 2xl:inline text-[11px] whitespace-nowrap mr-1">
+              <code>Enter</code> để gửi · <code>Shift+Enter</code> xuống dòng
+            </span>
+            <div
+              role="separator"
+              tabIndex={0}
+              aria-orientation="horizontal"
+              aria-label={resizerAriaLabel}
+              data-testid={resizerTestId}
+              style={{ display: "none" }}
+            />
+            <button
+              type="button"
+              data-testid={heightToggleTestId}
+              className="ade-icon-btn ade-icon-btn--sm"
+              aria-label="Đổi chiều cao khung nhập"
+              title="Co giãn chiều cao khung nhập"
+              onClick={() => setHeightPx((h) => (h < 132 ? 180 : 84))}
+            >
+              <HeightToggleIcon />
+            </button>
+            <Button
+              variant="primary"
+              size="md"
+              data-testid={sendBtnTestId}
+              disabled={submitting}
+              onClick={() => {
+                void handleSend();
+              }}
+            >
+              <Icon name="send" size={14} />
+              <span>{sendLabel === "Gửi" ? "Gửi tin nhắn" : sendLabel}</span>
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,16 +1,7 @@
 import type { RunStatus, RunnerStatus } from "@ade/shared";
+import { HubDomainError } from "../errors.js";
 
-export class HubDomainError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-    public readonly httpStatus: number,
-    public readonly fieldErrors?: Record<string, string[]>,
-  ) {
-    super(message);
-    this.name = "HubDomainError";
-  }
-}
+export { HubDomainError };
 
 const TERMINAL_RUN_STATUSES: ReadonlySet<RunStatus> = new Set(["completed", "failed", "cancelled"]);
 

@@ -11,6 +11,7 @@ dist/
 apps/web/dist/
 playwright-report/
 test-results/
+captures/
 *.tsbuildinfo
 
 # Môi trường

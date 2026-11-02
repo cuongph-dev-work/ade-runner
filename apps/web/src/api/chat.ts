@@ -1,6 +1,5 @@
 import {
   AgentListResponseSchema,
-  ApiErrorResponseSchema,
   CancelRunResponseSchema,
   ChannelListResponseSchema,
   ChannelResponseSchema,
@@ -19,7 +18,6 @@ import {
   type Channel,
   type CreateThreadResponse,
   type DeleteChannelResponse,
-  type FieldErrorMap,
   type Message,
   type PermissionReplyResponse,
   type PostMessageResponse,
@@ -31,58 +29,9 @@ import {
   type ReplyQuestionResponse,
   type QuestionAnswerItem
 } from "@ade/shared";
-import { ApiRequestError } from "./health.js";
+import { ChatApiError, requestJson } from "./client.js";
 
-export class ChatApiError extends ApiRequestError {
-  constructor(
-    status: number,
-    code: string,
-    message: string,
-    public readonly fieldErrors: FieldErrorMap = {}
-  ) {
-    super(status, code, message);
-    this.name = "ChatApiError";
-  }
-}
-
-async function requestJson<T>(
-  url: string,
-  init: RequestInit,
-  parseFn: (raw: unknown) => T
-): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...(init.headers ?? {})
-    }
-  });
-
-  if (!res.ok) {
-    let code = "ERR_INTERNAL_ERROR";
-    let message = `HTTP ${res.status}`;
-    let fieldErrors: FieldErrorMap = {};
-    try {
-      const json: unknown = await res.json();
-      const parsed = ApiErrorResponseSchema.safeParse(json);
-      if (parsed.success) {
-        code = parsed.data.code;
-        message = parsed.data.message;
-        const rawFe = parsed.data.details.fieldErrors;
-        if (rawFe && typeof rawFe === "object") {
-          fieldErrors = rawFe as FieldErrorMap;
-        }
-      }
-    } catch {
-      // Giữ lỗi mặc định
-    }
-    throw new ChatApiError(res.status, code, message, fieldErrors);
-  }
-
-  const data: unknown = await res.json();
-  return parseFn(data);
-}
+export { ChatApiError };
 
 export async function fetchProjects(): Promise<ProjectSummary[]> {
   const res = await requestJson("/api/projects", { method: "GET" }, (d) =>

@@ -55,35 +55,24 @@ export const ApprovalGateCard: React.FC<ApprovalGateCardProps> = ({
   };
 
   return (
-    <div
+    <article
       data-testid={`approval-gate-card-${card.approval_id}`}
-      className="ade-panel my-2 p-3 rounded-lg border text-sm"
-      style={{
-        backgroundColor: "var(--color-paper-2, #fff)",
-        borderColor: isPending ? "var(--color-lead, #d97706)" : "var(--color-rule-2, #e5e7eb)",
-      }}
+      data-gate-status={card.status}
+      className="ade-panel ade-gate-card p-3 space-y-2"
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-base">{title}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="ade-gate-mark" aria-hidden="true" />
+          <strong className="text-xs ade-mono">{title}</strong>
           <span
             data-testid="approval-status-badge"
-            className="ade-chip"
-            style={{
-              fontSize: "0.75rem",
-              backgroundColor:
-                card.status === "approved"
-                  ? "var(--color-ok-bg, #ecfdf5)"
-                  : card.status === "changes_requested"
-                  ? "var(--color-bad-bg, #fef2f2)"
-                  : "var(--color-warn-bg, #fffbeb)",
-              color:
-                card.status === "approved"
-                  ? "var(--color-ok, #059669)"
-                  : card.status === "changes_requested"
-                  ? "var(--color-bad, #dc2626)"
-                  : "var(--color-warn, #d97706)",
-            }}
+            className={`ade-chip ${
+              card.status === "approved"
+                ? "ade-chip--ok"
+                : card.status === "changes_requested"
+                ? "ade-chip--bad"
+                : "ade-chip--human"
+            }`}
           >
             {card.status === "approved"
               ? "Đã duyệt"
@@ -185,6 +174,6 @@ export const ApprovalGateCard: React.FC<ApprovalGateCardProps> = ({
           )}
         </div>
       )}
-    </div>
+    </article>
   );
 };

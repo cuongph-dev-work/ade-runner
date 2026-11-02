@@ -2,7 +2,35 @@ import type { FastifyInstance } from "fastify";
 import type Database from "better-sqlite3";
 import { ApprovalDecisionInputSchema, ThreadIdParamSchema } from "@ade/shared";
 import type { GateService } from "../orchestration/gate-service.js";
-import { HubDomainError } from "../chat/chat-service.js";
+import { HubDomainError } from "../errors.js";
+import { parseParamsOrNotFound } from "./route-utils.js";
+
+interface ApprovalRow {
+  id: string;
+  thread_id: string;
+  run_id: string | null;
+  gate: string;
+  version: number;
+  status: string;
+  target_state: string;
+  summary: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  feedback: string | null;
+  created_at: string;
+  updated_at: string;
+  run_summary: string | null;
+}
+
+interface ScratchpadRow {
+  thread_id: string;
+  agent_id: string;
+  content: string;
+  updated_at: string;
+  handle: string | null;
+  display_name: string | null;
+  avatar: string | null;
+}
 
 export function registerOrchestrationRoutes(
   app: FastifyInstance,
@@ -39,10 +67,7 @@ export function registerOrchestrationRoutes(
 
   // GET /api/threads/:threadId/approvals
   app.get("/api/threads/:threadId/approvals", async (req, reply) => {
-    const parsed = ThreadIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
+    const { threadId } = parseParamsOrNotFound(ThreadIdParamSchema, req.params);
 
     const rows = deps.sqlite
       .prepare(
@@ -52,10 +77,10 @@ export function registerOrchestrationRoutes(
          WHERE a.thread_id = ?
          ORDER BY a.version ASC`
       )
-      .all(parsed.data.threadId);
+      .all(threadId) as ApprovalRow[];
 
     return reply.status(200).send({
-      approvals: rows.map((r: any) => ({
+      approvals: rows.map((r) => ({
         id: r.id,
         threadId: r.thread_id,
         runId: r.run_id,
@@ -75,10 +100,7 @@ export function registerOrchestrationRoutes(
 
   // GET /api/threads/:threadId/scratchpads
   app.get("/api/threads/:threadId/scratchpads", async (req, reply) => {
-    const parsed = ThreadIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
+    const { threadId } = parseParamsOrNotFound(ThreadIdParamSchema, req.params);
 
     const rows = deps.sqlite
       .prepare(
@@ -88,10 +110,10 @@ export function registerOrchestrationRoutes(
          WHERE s.thread_id = ?
          ORDER BY s.updated_at DESC`
       )
-      .all(parsed.data.threadId);
+      .all(threadId) as ScratchpadRow[];
 
     return reply.status(200).send({
-      scratchpads: rows.map((r: any) => ({
+      scratchpads: rows.map((r) => ({
         threadId: r.thread_id,
         agentId: r.agent_id,
         agentHandle: r.handle ?? "@agent",

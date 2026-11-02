@@ -5,6 +5,7 @@ import {
   fetchHarnessesApi
 } from "../../api/settings.js";
 import type { ProjectTemplateId, HarnessItem } from "@ade/shared";
+import { IconButton, Icon } from "../ui/index.js";
 
 export interface ProjectWizardModalProps {
   onClose: () => void;
@@ -99,47 +100,76 @@ export const ProjectWizardModal: React.FC<ProjectWizardModalProps> = ({
   };
 
   return (
-    <div className="ade-modal-backdrop" style={{ zIndex: 9999 }}>
+    <div
+      className="ade-backdrop ade-backdrop--layer-1"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"
+        aria-labelledby="wizard-modal-title"
         data-testid="project-wizard"
-        className="ade-modal-shell ade-panel p-6 space-y-4"
-        style={{ maxWidth: "720px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}
+        className="ade-panel ade-modal-shell ade-modal-shell--lg"
       >
-        <div className="flex items-center justify-between border-b pb-3">
-          <h2 className="ade-head text-base font-bold">Tạo dự án mới</h2>
-          <button
-            type="button"
+        <div className="ade-modal-header">
+          <div>
+            <h2 id="wizard-modal-title" className="ade-head text-base font-semibold">Tạo dự án mới</h2>
+            <p className="text-xs ade-muted m-0 mt-0.5">
+              Đăng ký kho Git trên máy local, khởi tạo cấu hình <code>.ade/</code> và kiểm tra Harness.
+            </p>
+          </div>
+          <IconButton
             data-testid="close-project-wizard-btn"
+            variant="ghost"
+            size={28}
             aria-label="Đóng"
+            title="Đóng"
             onClick={onClose}
-            className="ade-icon-btn"
           >
-            ✕
-          </button>
+            <Icon name="close" size={16} />
+          </IconButton>
         </div>
 
         {/* Stepper */}
-        <div className="flex items-center gap-3 text-xs border-b pb-2">
-          <span className={currentStep === 1 ? "font-bold text-blue-600" : "ade-muted"}>
-            1. Kho mã nguồn
-          </span>
-          <span>&gt;</span>
-          <span className={currentStep === 2 ? "font-bold text-blue-600" : "ade-muted"}>
-            2. Mẫu Agent
-          </span>
-          <span>&gt;</span>
-          <span className={currentStep === 3 ? "font-bold text-blue-600" : "ade-muted"}>
-            3. Kiểm tra Harness
-          </span>
+        <div className="ade-modal-subbar">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            {[
+              { num: 1, label: "1. Kho mã nguồn" },
+              { num: 2, label: "2. Bộ mẫu Agent" },
+              { num: 3, label: "3. Kiểm tra Harness" }
+            ].map(({ num, label }) => {
+              const active = currentStep === num;
+              const done = currentStep > num;
+              return (
+                <div
+                  key={num}
+                  className="p-2.5 rounded flex items-center justify-between"
+                  style={{
+                    background: active ? "var(--color-human-soft)" : "var(--color-paper-2)",
+                    border: `var(--rule-hair) solid ${active ? "var(--color-human)" : "var(--color-rule)"}`
+                  }}
+                >
+                  <strong className={active ? "" : "ade-muted"}>{label}</strong>
+                  {done ? (
+                    <span className="ade-chip ade-chip--ok ade-chip--xs">Đạt</span>
+                  ) : active ? (
+                    <span className="ade-chip ade-chip--human ade-chip--xs">Đang mở</span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {errorMessage && (
-          <div role="alert" className="ade-panel ade-panel--bad p-2 text-xs">
-            {errorMessage}
-          </div>
-        )}
+        <div className="ade-modal-body space-y-4">
+          {errorMessage && (
+            <div role="alert" className="ade-panel ade-panel--bad p-2 text-xs">
+              {errorMessage}
+            </div>
+          )}
 
         {/* Step 1 */}
         {currentStep === 1 && (
@@ -406,6 +436,7 @@ export const ProjectWizardModal: React.FC<ProjectWizardModalProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

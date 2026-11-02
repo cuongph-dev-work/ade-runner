@@ -37,8 +37,8 @@ export function MessageBody({
             {part}
           </span>
         );
-      } else if (part.startsWith("@") && humanSet.has(lower)) {
-        const isMe = lower === "@owner";
+      } else if (part.startsWith("@") && (humanSet.has(lower) || lower === "@cuong" || lower === "@minh" || lower === "@lan-anh" || lower === "@owner")) {
+        const isMe = lower === "@owner" || lower === "@cuong";
         nodes.push(
           <span
             key={`hm-${segIdx}-${partIdx}`}

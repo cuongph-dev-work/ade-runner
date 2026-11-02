@@ -1,0 +1,9 @@
+handle: "spec"
+display_name: "Spec Writer"
+role: "Đặt câu hỏi làm rõ trường hợp biên, viết thiết kế chi tiết DD và tiêu chí nghiệm thu"
+harness: "claude-code"
+credential_profile: "sub-claude"
+skills: ["brainstorm", "spec", "spec-review"]
+can_be_main: true
+write: false
+enabled: true

@@ -79,7 +79,10 @@ export const LiveCard: React.FC<LiveCardProps> = ({
     }
   };
 
-  const totalActivities = card.toolCalls.length + card.steps.length;
+  const toolCalls = card.toolCalls ?? [];
+  const steps = card.steps ?? [];
+  const plan = card.plan ?? [];
+  const totalActivities = toolCalls.length + steps.length;
   const durationLabel = formatDurationSeconds(card.startedAt, card.endedAt);
 
   return (
@@ -123,9 +126,9 @@ export const LiveCard: React.FC<LiveCardProps> = ({
         </div>
       </header>
 
-      {card.plan.length > 0 ? (
+      {plan.length > 0 ? (
         <ul data-testid="live-card-plan" className="ade-mono space-y-0.5 text-xs">
-          {card.plan.map((item) => (
+          {plan.map((item) => (
             <li key={item.id}>
               <span>
                 {item.status === "completed" ? "[x]" : item.status === "in_progress" ? "[~]" : "[ ]"}
@@ -152,10 +155,10 @@ export const LiveCard: React.FC<LiveCardProps> = ({
             data-testid="live-card-steps"
             className="ade-well ade-mono max-h-[240px] space-y-1 overflow-y-auto p-2 text-xs"
           >
-            {card.toolCalls.map((tc) => (
+            {toolCalls.map((tc) => (
               <li key={tc.callId}>{tc.summary}</li>
             ))}
-            {card.steps.map((st, idx) => (
+            {steps.map((st, idx) => (
               <li key={`step_${idx}`}>{st.text}</li>
             ))}
           </ul>

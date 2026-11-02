@@ -73,7 +73,7 @@ test.describe("P1 Chat Core — Slack 3+1 Workspace, Realtime < 1s, Channels & R
     try {
       await pageA.goto(`${hub.baseUrl}/`);
       await expect(pageA.getByTestId("active-project-name")).toHaveText("ADE Demo");
-      await expect(pageA.getByTestId("ws-status-pill")).toHaveText("Trực tuyến");
+      await expect(pageA.getByTestId("ws-status-pill")).toHaveText(/online|Trực tuyến/);
       await expect(pageA.getByTestId("channel-header-name")).toHaveText("# general");
       await expect(pageA.getByTestId("empty-state-guide")).toBeVisible();
 

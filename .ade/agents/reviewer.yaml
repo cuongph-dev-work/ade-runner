@@ -1,0 +1,9 @@
+handle: "reviewer"
+display_name: "Code Reviewer"
+role: "Chấm diff chỉ đọc và đối chiếu quy tắc thiết kế"
+harness: "claude-code"
+credential_profile: "sub-claude"
+skills: ["code-review"]
+can_be_main: false
+write: false
+enabled: true

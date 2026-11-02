@@ -15,43 +15,7 @@ import {
   type DeleteSkillResponse,
   type HarnessItem
 } from "@ade/shared";
-import { ChatApiError } from "./chat.js";
-
-async function requestJson<T>(
-  url: string,
-  init: RequestInit,
-  expectedStatus: number | number[] = 200
-): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...(init.headers ?? {})
-    }
-  });
-
-  const validStatuses = Array.isArray(expectedStatus)
-    ? expectedStatus
-    : [expectedStatus];
-  if (!validStatuses.includes(res.status)) {
-    let code = `HTTP_${res.status}`;
-    let message = "Yêu cầu thất bại.";
-    let fieldErrors = {};
-    try {
-      const errJson = await res.json();
-      if (errJson && typeof errJson === "object") {
-        code = errJson.code ?? code;
-        message = errJson.message ?? message;
-        fieldErrors = errJson.details?.fieldErrors ?? {};
-      }
-    } catch {
-      // Ignore
-    }
-    throw new ChatApiError(res.status, code, message, fieldErrors);
-  }
-
-  return (await res.json()) as T;
-}
+import { requestJson } from "./client.js";
 
 export async function validateRepoApi(body: ValidateRepoInput): Promise<ValidateRepoResponse> {
   return requestJson<ValidateRepoResponse>("/api/projects/validate-repo", {

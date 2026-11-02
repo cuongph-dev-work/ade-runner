@@ -880,6 +880,7 @@ export class RunDispatcher {
   }
 
   private getActiveRunRow(runId: string): (Record<string, unknown> & { channel_id: string }) | undefined {
+    if (!this.deps.sqlite.open) return undefined;
     return this.deps.sqlite
       .prepare(
         `SELECT r.*, t.channel_id
@@ -892,6 +893,7 @@ export class RunDispatcher {
   }
 
   private getRunRow(runId: string): Record<string, unknown> | undefined {
+    if (!this.deps.sqlite.open) return undefined;
     return this.deps.sqlite.prepare("SELECT * FROM runs WHERE id = ?").get(runId) as
       | Record<string, unknown>
       | undefined;

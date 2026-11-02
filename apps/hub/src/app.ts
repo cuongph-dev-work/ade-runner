@@ -25,8 +25,8 @@ import { registerMcpRoutes } from "./routes/mcp.js";
 import { registerQuestionRoutes } from "./routes/questions.js";
 import { registerGrantRoutes } from "./routes/grants.js";
 import { InMemoryEventBus } from "./events/event-bus.js";
-import { ChatService, HubDomainError } from "./chat/chat-service.js";
-import { HubDomainError as RunnerDomainError } from "./runner/state-machines.js";
+import { ChatService } from "./chat/chat-service.js";
+import { HubDomainError } from "./errors.js";
 import { RunDispatcher } from "./runner/run-dispatcher.js";
 import { GrantService } from "./trigger/grant-service.js";
 import { McpTokenService, HubMcpError } from "./mcp/mcp-token-service.js";
@@ -484,15 +484,6 @@ export async function buildHubApp(
         code: error.code,
         message: error.message,
         details: error.details
-      });
-      return;
-    }
-
-    if (error instanceof RunnerDomainError) {
-      void reply.status(error.httpStatus).send({
-        code: error.code,
-        message: error.message,
-        details: error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}
       });
       return;
     }

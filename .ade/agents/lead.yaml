@@ -1,0 +1,9 @@
+handle: "lead"
+display_name: "Lead"
+role: "Main Agent điều phối luồng phát triển"
+harness: "claude-code"
+credential_profile: "sub-claude"
+skills: ["plan", "delegate"]
+can_be_main: true
+write: true
+enabled: true

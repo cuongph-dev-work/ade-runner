@@ -29,7 +29,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ card, onReplyQuestio
     setSubmitting(true);
     try {
       if (card.questions && card.questions.length > 0) {
-        const answers: QuestionAnswerItem[] = card.questions.map((q) => {
+        const answers: QuestionAnswerItem[] = (card.questions ?? []).map((q) => {
           const ans = multiAnswers[q.id];
           return {
             question_id: q.id,
@@ -59,7 +59,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ card, onReplyQuestio
       data-testid={`question-card-${card.question_id}`}
       data-question-id={card.question_id}
       data-status={card.status}
-      className="ade-panel ade-gate-card p-3 space-y-3"
+      className="ade-panel ade-gate-card ade-clarify-card p-3 space-y-3"
     >
       <header className="flex flex-wrap items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
@@ -122,7 +122,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ card, onReplyQuestio
       {card.questions && card.questions.length > 0 && (
         <div data-testid="sub-questions-list" className="space-y-3 text-xs">
           {card.questions.map((q) => (
-            <div key={q.id} className="p-2.5 rounded bg-[var(--color-paper-2)] space-y-1.5">
+            <div key={q.id} className="ade-q-block p-2.5 rounded space-y-1.5" style={{ backgroundColor: "var(--color-paper-2)", border: "var(--rule-hair) solid var(--color-rule-2)" }}>
               <div className="font-semibold text-xs text-[var(--color-ink)]">{q.prompt}</div>
               {q.options && q.options.length > 0 && (
                 <div className="space-y-1">
@@ -132,7 +132,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ card, onReplyQuestio
                     const cur = multiAnswers[q.id]?.optionIds ?? [];
                     const isChecked = cur.includes(optId);
                     return (
-                      <label key={optId} className="flex items-center gap-2 cursor-pointer">
+                      <label
+                        key={optId}
+                        className={`flex items-center gap-2 p-1.5 rounded cursor-pointer transition ${
+                          isChecked
+                            ? "bg-[var(--color-paper-3)] border border-[var(--color-agent)] font-medium"
+                            : "hover:bg-[var(--color-paper)]"
+                        }`}
+                      >
                         <input
                           type={q.type === "multi" ? "checkbox" : "radio"}
                           name={`sub_${q.id}`}

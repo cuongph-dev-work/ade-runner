@@ -15,7 +15,8 @@ import {
   ThreadListResponseSchema,
   ToggleReactionResponseSchema
 } from "@ade/shared";
-import { ChatService, HubDomainError } from "../chat/chat-service.js";
+import type { ChatService } from "../chat/chat-service.js";
+import { parseParamsOrNotFound } from "./route-utils.js";
 
 function toBodyRecord(body: unknown): Record<string, unknown> {
   if (body && typeof body === "object" && !Array.isArray(body)) {
@@ -34,105 +35,75 @@ export async function registerChatRoutes(
   });
 
   app.get("/api/projects/:projectId/agents", async (req, reply) => {
-    const parsed = ProjectIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
-    const result = chatService.listAgents(parsed.data.projectId);
+    const { projectId } = parseParamsOrNotFound(ProjectIdParamSchema, req.params);
+    const result = chatService.listAgents(projectId);
     return reply.status(200).send(AgentListResponseSchema.parse(result));
   });
 
   app.get("/api/projects/:projectId/channels", async (req, reply) => {
-    const parsed = ProjectIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
-    const channels = chatService.listChannels(parsed.data.projectId);
+    const { projectId } = parseParamsOrNotFound(ProjectIdParamSchema, req.params);
+    const channels = chatService.listChannels(projectId);
     return reply.status(200).send(ChannelListResponseSchema.parse({ channels }));
   });
 
   app.post("/api/projects/:projectId/channels", async (req, reply) => {
-    const parsed = ProjectIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
+    const { projectId } = parseParamsOrNotFound(ProjectIdParamSchema, req.params);
     const channel = chatService.createChannel(
-      parsed.data.projectId,
+      projectId,
       toBodyRecord(req.body)
     );
     return reply.status(201).send(ChannelResponseSchema.parse({ channel }));
   });
 
   app.patch("/api/channels/:channelId", async (req, reply) => {
-    const parsed = ChannelIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
+    const { channelId } = parseParamsOrNotFound(ChannelIdParamSchema, req.params);
     const channel = chatService.updateChannel(
-      parsed.data.channelId,
+      channelId,
       toBodyRecord(req.body)
     );
     return reply.status(200).send(ChannelResponseSchema.parse({ channel }));
   });
 
   app.delete("/api/channels/:channelId", async (req, reply) => {
-    const parsed = ChannelIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
-    const deleted = chatService.deleteChannel(parsed.data.channelId);
+    const { channelId } = parseParamsOrNotFound(ChannelIdParamSchema, req.params);
+    const deleted = chatService.deleteChannel(channelId);
     return reply.status(200).send(DeleteChannelResponseSchema.parse(deleted));
   });
 
   app.get("/api/channels/:channelId/threads", async (req, reply) => {
-    const parsed = ChannelIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
-    const threads = chatService.listThreads(parsed.data.channelId);
+    const { channelId } = parseParamsOrNotFound(ChannelIdParamSchema, req.params);
+    const threads = chatService.listThreads(channelId);
     return reply.status(200).send(ThreadListResponseSchema.parse({ threads }));
   });
 
   app.post("/api/channels/:channelId/threads", async (req, reply) => {
-    const parsed = ChannelIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
+    const { channelId } = parseParamsOrNotFound(ChannelIdParamSchema, req.params);
     const created = chatService.createThread(
-      parsed.data.channelId,
+      channelId,
       toBodyRecord(req.body)
     );
     return reply.status(201).send(CreateThreadResponseSchema.parse(created));
   });
 
   app.get("/api/threads/:threadId/messages", async (req, reply) => {
-    const parsed = ThreadIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
-    const messages = chatService.listMessages(parsed.data.threadId);
+    const { threadId } = parseParamsOrNotFound(ThreadIdParamSchema, req.params);
+    const messages = chatService.listMessages(threadId);
     return reply.status(200).send(MessageListResponseSchema.parse({ messages }));
   });
 
   app.post("/api/threads/:threadId/messages", async (req, reply) => {
-    const parsed = ThreadIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
+    const { threadId } = parseParamsOrNotFound(ThreadIdParamSchema, req.params);
     const posted = chatService.postMessage(
-      parsed.data.threadId,
+      threadId,
       toBodyRecord(req.body)
     );
     return reply.status(201).send(PostMessageResponseSchema.parse(posted));
   });
 
   app.post("/api/messages/:messageId/reactions", async (req, reply) => {
-    const parsed = MessageIdParamSchema.safeParse(req.params);
-    if (!parsed.success) {
-      throw new HubDomainError(404, "ERR_NOT_FOUND");
-    }
+    const { messageId } = parseParamsOrNotFound(MessageIdParamSchema, req.params);
     const toggled = chatService.toggleReaction(
-      parsed.data.messageId,
+      messageId,
       toBodyRecord(req.body)
     );
     return reply.status(200).send(ToggleReactionResponseSchema.parse(toggled));

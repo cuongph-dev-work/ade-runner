@@ -1,0 +1,9 @@
+handle: "tester"
+display_name: "Tester"
+role: "Kỹ sư kiểm thử tự động và xác thực"
+harness: "codex"
+credential_profile: "sub-chatgpt"
+skills: ["write-tests"]
+can_be_main: false
+write: true
+enabled: true
